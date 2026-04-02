@@ -4,9 +4,9 @@ import { Link } from "react-router";
 function HeroPage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section - Split Layout */}
+
       <section className="flex flex-col lg:flex-row">
-        {/* Left side - White background with content */}
+
         <div className="flex-1 bg-white px-8 lg:px-16 py-16 lg:py-24">
           <h1 className="text-4xl sm:text-5xl font-bold text-hanover-deepblue mb-4">
             Welcome to Hanover
@@ -15,7 +15,6 @@ function HeroPage() {
             Your internal knowledge management portal
           </p>
 
-          {/* Action Buttons */}
           <div className="flex flex-wrap gap-4">
             <Link
               to="/content"
@@ -41,7 +40,6 @@ function HeroPage() {
           </div>
         </div>
 
-        {/* Right side - Navy background with branding */}
         <div className="lg:w-100 bg-hanover-deepblue flex items-center justify-center py-16 lg:py-24 px-8">
           <div className="text-center">
             <p className="text-gray-400 text-2xl font-light">The Hanover</p>
