@@ -12,6 +12,7 @@ model Employee {
   job_desc      String? @db.VarChar(200)
 
   content_items ContentManagement[] @relation("content_owner_fk")
+  auditLogs     AuditLog[]
 
   @@map("employee")
 }
@@ -27,7 +28,21 @@ model ContentManagement {
   content_type    String?   @db.VarChar(20)
   document_status String?   @db.VarChar(20)
 
-  employee Employee? @relation("content_owner_fk", fields: [content_owner], references: [employeeID])
+  employee  Employee?  @relation("content_owner_fk", fields: [content_owner], references: [employeeID])
+  auditLogs AuditLog[]
 
   @@map("content_management")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  documentId String?
+  timestamp  DateTime @default(now())
+
+  employee Employee           @relation(fields: [userId], references: [employeeID])
+  document ContentManagement? @relation(fields: [documentId], references: [fileID])
+
+  @@map("audit_log")
 }
