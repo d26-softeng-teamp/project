@@ -18,6 +18,10 @@ export const contentRouter = router({
       where.content_owner = input.content_owner;
     }
 
+    if (input.job_position) {
+      where.job_position = input.job_position;
+    }
+
     if (input.search) {
       where.OR = [
         { filename: { contains: input.search, mode: "insensitive" } },

@@ -21,6 +21,7 @@ export const updateContentSchema = createContentSchema.omit({ fileID: true }).pa
 export const contentListQuerySchema = z.object({
   document_status: z.string().optional(),
   content_owner: z.string().optional(),
+  job_position: z.string().optional(),
   search: z.string().optional(),
 });
 
