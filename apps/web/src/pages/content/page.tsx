@@ -1,7 +1,7 @@
 import { FileText, Loader2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc.ts";
 
 function getStatusBadge(status: string | null) {
   switch (status) {

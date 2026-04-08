@@ -23,6 +23,7 @@
     "@trpc/react-query": "^11.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "lucide-react": "^0.500.0",
     "react-router": "^7.0.0",
     "serve": "^14.2.0"
   },

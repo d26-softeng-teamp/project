@@ -2,7 +2,7 @@ import { TextInput } from "@myapp/ui/components/text-input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc.ts";
 
 function EmployeesFormPage() {
   const { id } = useParams<{ id: string }>();

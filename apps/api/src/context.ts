@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { prisma } from "./lib/prisma";
 
 /**
@@ -29,9 +29,9 @@ function extractBearerToken(authHeader: string | null | undefined): string | nul
 }
 
 /**
- * Context for the standalone Node.js dev server (IncomingMessage).
+ * Context for Express requests.
  */
-export async function createContext({ req }: CreateHTTPContextOptions) {
+export async function createContext({ req }: CreateExpressContextOptions) {
   const authHeader = req.headers.authorization;
   return createContextInner(extractBearerToken(authHeader));
 }

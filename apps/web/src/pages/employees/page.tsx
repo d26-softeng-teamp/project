@@ -1,7 +1,7 @@
 import { Loader2, Plus, Search, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc.ts";
 
 function EmployeesPage() {
   const [search, setSearch] = useState("");

@@ -28,6 +28,8 @@
   "dependencies": {
     "@myapp/types": "workspace:*",
     "@myapp/utils": "workspace:*",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@supabase/supabase-js": "^2.102.1",
@@ -37,6 +39,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.19.17",
     "@types/pg": "^8.20.0",
     "dotenv": "^17.4.1",
