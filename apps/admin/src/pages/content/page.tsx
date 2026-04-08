@@ -13,8 +13,7 @@ function matchesRole(jobPosition: string | null, role: string): boolean {
   if (role === "all") return true;
   const pos = jobPosition?.toLowerCase() ?? "";
   if (role === "underwriter") return pos.includes("underwriter");
-  if (role === "business-analyst")
-    return pos.includes("business") || pos.includes("analyst");
+  if (role === "business-analyst") return pos.includes("business") || pos.includes("analyst");
   return false;
 }
 
@@ -29,41 +28,33 @@ function AdminContentPage() {
   });
 
   const allItems = contents.data ?? [];
-
-  const filtered = allItems.filter((item) =>
-    matchesRole(item.job_position, roleFilter),
-  );
-
-  const underwriterCount = allItems.filter((item) =>
-    matchesRole(item.job_position, "underwriter"),
-  ).length;
-
-  const analystCount = allItems.filter((item) =>
-    matchesRole(item.job_position, "business-analyst"),
-  ).length;
+  const filtered = allItems.filter((item) => matchesRole(item.job_position, roleFilter));
 
   const roleTabs = [
     { key: "all", label: "All Users", count: allItems.length },
-    { key: "underwriter", label: "Underwriter", count: underwriterCount },
-    { key: "business-analyst", label: "Business Analyst", count: analystCount },
+    {
+      key: "underwriter",
+      label: "Underwriter",
+      count: allItems.filter((item) => matchesRole(item.job_position, "underwriter")).length,
+    },
+    {
+      key: "business-analyst",
+      label: "Business Analyst",
+      count: allItems.filter((item) => matchesRole(item.job_position, "business-analyst")).length,
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <div className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground">
-                <FileText className="h-8 w-8 text-hanover-green" />
-                All Content
-              </h1>
-              <p className="mt-1 text-muted-foreground">
-                Viewing content across all user types
-              </p>
-            </div>
+          <div className="mb-8">
+            <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground">
+              <FileText className="h-8 w-8 text-hanover-green" />
+              All Content
+            </h1>
+            <p className="mt-1 text-muted-foreground">Viewing content across all user types</p>
           </div>
 
           {/* Role filter tabs */}
@@ -71,6 +62,7 @@ function AdminContentPage() {
             {roleTabs.map((tab) => (
               <button
                 key={tab.key}
+                type="button"
                 onClick={() => setRoleFilter(tab.key)}
                 className={`rounded px-4 py-1.5 text-sm font-medium transition-colors ${
                   roleFilter === tab.key
@@ -126,13 +118,10 @@ function AdminContentPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((item) => (
-                <div
-                  key={item.fileID}
-                  className="rounded border border-border bg-white p-5 shadow-sm"
-                >
+                <div key={item.fileID} className="rounded border border-border bg-white p-5 shadow-sm">
                   {/* Title + status */}
                   <div className="mb-3 flex items-start justify-between gap-2">
-                    <h3 className="text-base font-semibold text-foreground leading-snug">
+                    <h3 className="text-base font-semibold leading-snug text-foreground">
                       {item.filename ?? "Untitled"}
                     </h3>
                     <span
@@ -160,7 +149,6 @@ function AdminContentPage() {
               ))}
             </div>
           )}
-
         </div>
       </div>
     </div>
