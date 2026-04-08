@@ -32,11 +32,15 @@
     "@prisma/client": "^7.6.0",
     "@supabase/supabase-js": "^2.49.0",
     "@trpc/server": "^11.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "pg": "^8.20.0",
     "prisma": "^7.6.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.20.0",
     "esbuild": "^0.28.0",
