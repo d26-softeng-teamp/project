@@ -1,30 +1,33 @@
-import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { deleteUser, getUsers, ROLE_LABELS, type AppUser } from "@/lib/users-store";
+import { trpc } from "@/lib/trpc";
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  underwriter: "Underwriter",
+  "business-analyst": "Business Analyst",
+};
 
 function UsersPage() {
-  const [users, setUsers] = useState<AppUser[]>(() => getUsers());
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const filtered = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      ROLE_LABELS[u.role].toLowerCase().includes(search.toLowerCase()),
-  );
+  const utils = trpc.useUtils();
+  const users = trpc.appUser.list.useQuery({ search });
 
-  function handleDelete(id: string) {
-    deleteUser(id);
-    setUsers(getUsers());
-    setConfirmDeleteId(null);
-  }
+  const deleteMutation = trpc.appUser.delete.useMutation({
+    onSuccess: () => {
+      utils.appUser.list.invalidate();
+      setConfirmDeleteId(null);
+    },
+  });
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <div className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -59,22 +62,29 @@ function UsersPage() {
 
           {/* Table */}
           <div className="overflow-x-auto rounded bg-white shadow-sm">
-            {filtered.length === 0 ? (
+            {users.isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />
+                <span className="ml-2 text-muted-foreground">Loading users...</span>
+              </div>
+            ) : users.isError ? (
+              <div className="py-16 text-center text-red-600">
+                Failed to load users. Is the API running?
+              </div>
+            ) : users.data?.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground">No users found.</div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-[#F9FAFB]">
                     <th className="px-4 py-3 text-left font-semibold text-foreground">Username</th>
-                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                      Display Name
-                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-foreground">Display Name</th>
                     <th className="px-4 py-3 text-left font-semibold text-foreground">Role</th>
                     <th className="px-4 py-3 text-left font-semibold text-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((user) => (
+                  {users.data?.map((user) => (
                     <>
                       <tr
                         key={user.id}
@@ -84,7 +94,7 @@ function UsersPage() {
                           {user.username}
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">
-                          {user.displayName}
+                          {user.display_name ?? "—"}
                         </td>
                         <td className="px-4 py-3">
                           <RoleBadge role={user.role} />
@@ -108,6 +118,7 @@ function UsersPage() {
                           </div>
                         </td>
                       </tr>
+
                       {confirmDeleteId === user.id && (
                         <tr key={`${user.id}-confirm`} className="bg-red-50">
                           <td colSpan={4} className="px-4 py-3">
@@ -123,9 +134,13 @@ function UsersPage() {
                                   Cancel
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(user.id)}
-                                  className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+                                  onClick={() => deleteMutation.mutate({ id: user.id })}
+                                  disabled={deleteMutation.isPending}
+                                  className="flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-60"
                                 >
+                                  {deleteMutation.isPending && (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  )}
                                   Confirm Delete
                                 </button>
                               </div>
@@ -139,21 +154,24 @@ function UsersPage() {
               </table>
             )}
           </div>
+
         </div>
       </div>
     </div>
   );
 }
 
-function RoleBadge({ role }: { role: AppUser["role"] }) {
-  const styles: Record<AppUser["role"], string> = {
+function RoleBadge({ role }: { role: string }) {
+  const styles: Record<string, string> = {
     admin: "bg-hanover-deepblue/10 text-hanover-deepblue",
     underwriter: "bg-hanover-green/10 text-hanover-green",
     "business-analyst": "bg-[#C9A84C]/20 text-[#8a6f28]",
   };
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${styles[role]}`}>
-      {ROLE_LABELS[role]}
+    <span
+      className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${styles[role] ?? "bg-gray-100 text-gray-600"}`}
+    >
+      {ROLE_LABELS[role] ?? role}
     </span>
   );
 }

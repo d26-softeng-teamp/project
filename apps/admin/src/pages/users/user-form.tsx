@@ -1,22 +1,28 @@
 import { TextInput } from "@myapp/ui/components/text-input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import {
-  generateId,
-  getUserById,
-  ROLE_LABELS,
-  saveUser,
-  type AppUser,
-  type UserRole,
-} from "@/lib/users-store";
+import { trpc } from "@/lib/trpc";
+
+type UserRole = "admin" | "underwriter" | "business-analyst";
 
 const ROLES: UserRole[] = ["admin", "underwriter", "business-analyst"];
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Admin",
+  underwriter: "Underwriter",
+  "business-analyst": "Business Analyst",
+};
 
 function UserFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEditing = Boolean(id) && id !== "new";
+
+  const existing = trpc.appUser.getById.useQuery(
+    { id: id! },
+    { enabled: isEditing },
+  );
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -25,40 +31,64 @@ function UserFormPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isEditing && id) {
-      const existing = getUserById(id);
-      if (existing) {
-        setUsername(existing.username);
-        setPassword(existing.password);
-        setRole(existing.role);
-        setDisplayName(existing.displayName);
-      }
+    if (existing.data) {
+      setUsername(existing.data.username);
+      setPassword(existing.data.password);
+      setRole(existing.data.role as UserRole);
+      setDisplayName(existing.data.display_name ?? "");
     }
-  }, [id, isEditing]);
+  }, [existing.data]);
+
+  const utils = trpc.useUtils();
+
+  const create = trpc.appUser.create.useMutation({
+    onSuccess: () => {
+      utils.appUser.list.invalidate();
+      navigate("/users");
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const update = trpc.appUser.update.useMutation({
+    onSuccess: () => {
+      utils.appUser.list.invalidate();
+      utils.appUser.getById.invalidate({ id: id! });
+      navigate("/users");
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const isSaving = create.isPending || update.isPending;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) {
-      setError("Username is required.");
-      return;
+    if (isEditing) {
+      update.mutate({
+        id: id!,
+        username: username.trim(),
+        password: password.trim(),
+        role,
+        display_name: displayName.trim() || null,
+      });
+    } else {
+      create.mutate({
+        username: username.trim(),
+        password: password.trim(),
+        role,
+        display_name: displayName.trim() || null,
+      });
     }
-    if (!password.trim()) {
-      setError("Password is required.");
-      return;
-    }
+  }
 
-    const user: AppUser = {
-      id: isEditing ? id! : generateId(),
-      username: username.trim(),
-      password: password.trim(),
-      role,
-      displayName: displayName.trim() || username.trim(),
-    };
-
-    saveUser(user);
-    navigate("/users");
+  if (isEditing && existing.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F5F5]">
+        <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />
+        <span className="ml-2 text-muted-foreground">Loading user...</span>
+      </div>
+    );
   }
 
   return (
@@ -83,7 +113,6 @@ function UserFormPage() {
                 label="Username"
                 type="text"
                 required
-                disabled={isEditing}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -126,8 +155,10 @@ function UserFormPage() {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded bg-hanover-green py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90"
+                disabled={isSaving}
+                className="flex w-full items-center justify-center gap-2 rounded bg-hanover-green py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90 disabled:opacity-60"
               >
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isEditing ? "Update User" : "Save User"}
               </button>
             </form>
