@@ -4,8 +4,8 @@ import BusinessAnalyst from "@/pages/business-analyst/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
 import ContentListPage from "@/pages/content/page.tsx";
 import DashboardPage from "@/pages/dashboard/page.tsx";
-import EmployeesPage from "@/pages/employees/page.tsx";
 import EmployeesFormPage from "@/pages/employees/employees-form.tsx";
+import EmployeesPage from "@/pages/employees/page.tsx";
 import HeroPage from "@/pages/hero/page.tsx";
 import UnderwriterPage from "@/pages/underwriter/page.tsx";
 

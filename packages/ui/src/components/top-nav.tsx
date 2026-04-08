@@ -2,8 +2,8 @@ import { NavLink } from "react-router";
 import { cn } from "../lib/utils";
 
 interface NavItem {
-    label: string;
-    to: string;
+  label: string;
+  to: string;
 }
 
 function TopNav({ items }: { items: NavItem[] }) {

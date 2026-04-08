@@ -1,22 +1,24 @@
 import { TextInput } from "@myapp/ui/components/text-input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import {
-  generateId,
-  getUserById,
-  ROLE_LABELS,
-  saveUser,
-  type AppUser,
-  type UserRole,
-} from "@/lib/users-store";
+import { trpc } from "@/lib/trpc";
+
+type UserRole = "admin" | "underwriter" | "business-analyst";
 
 const ROLES: UserRole[] = ["admin", "underwriter", "business-analyst"];
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Admin",
+  underwriter: "Underwriter",
+  "business-analyst": "Business Analyst",
+};
 
 function UserFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEditing = Boolean(id) && id !== "new";
+  const isEditing = Boolean(id);
+  const utils = trpc.useUtils();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -24,17 +26,34 @@ function UserFormPage() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
 
+  const existingUser = trpc.appUser.getById.useQuery({ id: id! }, { enabled: isEditing });
+
   useEffect(() => {
-    if (isEditing && id) {
-      const existing = getUserById(id);
-      if (existing) {
-        setUsername(existing.username);
-        setPassword(existing.password);
-        setRole(existing.role);
-        setDisplayName(existing.displayName);
-      }
+    if (existingUser.data) {
+      setUsername(existingUser.data.username);
+      setPassword(existingUser.data.password);
+      setRole(existingUser.data.role as UserRole);
+      setDisplayName(existingUser.data.display_name ?? "");
     }
-  }, [id, isEditing]);
+  }, [existingUser.data]);
+
+  const createMutation = trpc.appUser.create.useMutation({
+    onSuccess: () => {
+      utils.appUser.list.invalidate();
+      navigate("/users");
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const updateMutation = trpc.appUser.update.useMutation({
+    onSuccess: () => {
+      utils.appUser.list.invalidate();
+      navigate("/users");
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,16 +68,48 @@ function UserFormPage() {
       return;
     }
 
-    const user: AppUser = {
-      id: isEditing ? id! : generateId(),
-      username: username.trim(),
-      password: password.trim(),
-      role,
-      displayName: displayName.trim() || username.trim(),
-    };
+    if (isEditing && id) {
+      updateMutation.mutate({
+        id,
+        username: username.trim(),
+        password: password.trim(),
+        role,
+        display_name: displayName.trim() || null,
+      });
+    } else {
+      createMutation.mutate({
+        username: username.trim(),
+        password: password.trim(),
+        role,
+        display_name: displayName.trim() || null,
+      });
+    }
+  }
 
-    saveUser(user);
-    navigate("/users");
+  if (isEditing && existingUser.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F5F5]">
+        <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />
+        <span className="ml-2 text-muted-foreground">Loading user...</span>
+      </div>
+    );
+  }
+
+  if (isEditing && existingUser.isError) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] py-12">
+        <div className="mx-auto max-w-[640px] px-4">
+          <Link
+            to="/users"
+            className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to User Management
+          </Link>
+          <div className="py-16 text-center text-red-600">User not found.</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -96,8 +147,11 @@ function UserFormPage() {
               />
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Role</label>
+                <label htmlFor="role" className="text-sm font-medium text-foreground">
+                  Role
+                </label>
                 <select
+                  id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value as UserRole)}
                   className="rounded border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green"
@@ -125,8 +179,10 @@ function UserFormPage() {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded bg-hanover-green py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90"
+                disabled={isPending}
+                className="flex w-full items-center justify-center gap-2 rounded bg-hanover-green py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90 disabled:opacity-50"
               >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isEditing ? "Update User" : "Save User"}
               </button>
             </form>
