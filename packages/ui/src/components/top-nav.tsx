@@ -10,10 +10,16 @@ function TopNav({ items }: { items: NavItem[] }) {
     return (
         <nav className="w-full bg-hanover-deepblue py-2">
             <div className="flex items-center justify-between px-8 h-24 w-full">
-                <span className="text-lg font-bold tracking-tight text-white shrink-0">
-                  Hanover
-                </span>
 
+                {/* Logo */}
+                <NavLink
+                    to="/hero"
+                    className="text-lg font-bold tracking-tight text-white shrink-0 cursor-pointer no-underline hover:opacity-80 transition"
+                >
+                    Hanover
+                </NavLink>
+
+                {/* Navigation Items */}
                 <div className="flex items-center gap-2 h-full">
                     {items.map((item) => (
                         <NavLink
@@ -32,6 +38,7 @@ function TopNav({ items }: { items: NavItem[] }) {
                         </NavLink>
                     ))}
                 </div>
+
             </div>
         </nav>
     );
