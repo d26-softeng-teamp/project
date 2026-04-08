@@ -1,118 +1,52 @@
-import { FileText, Plus, Search } from "lucide-react";
+import { FileText, Loader2, Search } from "lucide-react";
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 
-type JobPosition = "underwriter" | "business-analyst";
-type DocumentStatus = "Created" | "in-progress" | "Finalized" | "Archived";
-type ContentType = "Reference" | "Workflow";
-
-interface ContentItem {
-  fileID: string;
-  filename: string;
-  url: string;
-  owner: string;
-  job_position: JobPosition;
-  content_type: ContentType;
-  document_status: DocumentStatus;
-  last_modified: string;
-}
-
-const MOCK_CONTENT: ContentItem[] = [
-  {
-    fileID: "1",
-    filename: "Commercial Auto Underwriting Guidelines",
-    url: "/docs/commercial-auto-guidelines",
-    owner: "emp1",
-    job_position: "underwriter",
-    content_type: "Reference",
-    document_status: "Finalized",
-    last_modified: "2026-03-10",
-  },
-  {
-    fileID: "2",
-    filename: "Property Risk Assessment Workflow",
-    url: "/docs/property-risk-workflow",
-    owner: "emp1",
-    job_position: "underwriter",
-    content_type: "Workflow",
-    document_status: "in-progress",
-    last_modified: "2026-03-28",
-  },
-  {
-    fileID: "3",
-    filename: "Liability Coverage Reference Sheet",
-    url: "/docs/liability-reference",
-    owner: "emp1",
-    job_position: "underwriter",
-    content_type: "Reference",
-    document_status: "Finalized",
-    last_modified: "2026-02-14",
-  },
-  {
-    fileID: "4",
-    filename: "Q1 Business Performance Report",
-    url: "/docs/q1-performance",
-    owner: "emp2",
-    job_position: "business-analyst",
-    content_type: "Reference",
-    document_status: "Finalized",
-    last_modified: "2026-03-20",
-  },
-  {
-    fileID: "5",
-    filename: "Claims Analysis Workflow",
-    url: "/docs/claims-analysis",
-    owner: "emp2",
-    job_position: "business-analyst",
-    content_type: "Workflow",
-    document_status: "Created",
-    last_modified: "2026-04-01",
-  },
-  {
-    fileID: "6",
-    filename: "Market Trend Analysis 2026",
-    url: "/docs/market-trends-2026",
-    owner: "emp2",
-    job_position: "business-analyst",
-    content_type: "Reference",
-    document_status: "in-progress",
-    last_modified: "2026-04-05",
-  },
-];
-
-const STATUS_STYLES: Record<DocumentStatus, string> = {
+const STATUS_STYLES: Record<string, string> = {
   Finalized: "bg-hanover-green text-white",
   "in-progress": "bg-blue-500 text-white",
   Created: "bg-[#C9A84C] text-white",
   Archived: "bg-gray-400 text-white",
 };
 
-const POSITION_LABELS: Record<JobPosition, string> = {
-  underwriter: "Underwriter",
-  "business-analyst": "Business Analyst",
-};
-
-const POSITION_BADGE: Record<JobPosition, string> = {
-  underwriter: "bg-hanover-green/10 text-hanover-green",
-  "business-analyst": "bg-[#C9A84C]/20 text-[#8a6f28]",
-};
+function matchesRole(jobPosition: string | null, role: string): boolean {
+  if (role === "all") return true;
+  const pos = jobPosition?.toLowerCase() ?? "";
+  if (role === "underwriter") return pos.includes("underwriter");
+  if (role === "business-analyst")
+    return pos.includes("business") || pos.includes("analyst");
+  return false;
+}
 
 function AdminContentPage() {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | JobPosition>("all");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const filtered = MOCK_CONTENT.filter((item) => {
-    const matchesSearch =
-      item.filename.toLowerCase().includes(search.toLowerCase()) ||
-      item.url.toLowerCase().includes(search.toLowerCase()) ||
-      item.owner.toLowerCase().includes(search.toLowerCase());
-
-    const matchesRole = roleFilter === "all" || item.job_position === roleFilter;
-
-    const matchesStatus = !statusFilter || item.document_status === statusFilter;
-
-    return matchesSearch && matchesRole && matchesStatus;
+  const contents = trpc.content.list.useQuery({
+    search,
+    document_status: statusFilter || undefined,
   });
+
+  const allItems = contents.data ?? [];
+
+  const filtered = allItems.filter((item) =>
+    matchesRole(item.job_position, roleFilter),
+  );
+
+  const underwriterCount = allItems.filter((item) =>
+    matchesRole(item.job_position, "underwriter"),
+  ).length;
+
+  const analystCount = allItems.filter((item) =>
+    matchesRole(item.job_position, "business-analyst"),
+  ).length;
+
+  const roleTabs = [
+    { key: "all", label: "All Users", count: allItems.length },
+    { key: "underwriter", label: "Underwriter", count: underwriterCount },
+    { key: "business-analyst", label: "Business Analyst", count: analystCount },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
@@ -130,41 +64,26 @@ function AdminContentPage() {
                 Viewing content across all user types
               </p>
             </div>
-            <button
-              disabled
-              className="flex items-center gap-2 rounded bg-hanover-green px-4 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
-              title="Coming soon"
-            >
-              <Plus className="h-4 w-4" />
-              New Content
-            </button>
           </div>
 
           {/* Role filter tabs */}
           <div className="mb-6 flex items-center gap-2">
-            {(["all", "underwriter", "business-analyst"] as const).map((role) => {
-              const label =
-                role === "all" ? "All Users" : POSITION_LABELS[role as JobPosition];
-              const isActive = roleFilter === role;
-              return (
-                <button
-                  key={role}
-                  onClick={() => setRoleFilter(role)}
-                  className={`rounded px-4 py-1.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-hanover-deepblue text-white"
-                      : "bg-white border border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                  <span className="ml-2 text-xs opacity-70">
-                    {role === "all"
-                      ? MOCK_CONTENT.length
-                      : MOCK_CONTENT.filter((c) => c.job_position === role).length}
-                  </span>
-                </button>
-              );
-            })}
+            {roleTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setRoleFilter(tab.key)}
+                className={`rounded px-4 py-1.5 text-sm font-medium transition-colors ${
+                  roleFilter === tab.key
+                    ? "bg-hanover-deepblue text-white"
+                    : "border border-border bg-white text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {!contents.isLoading && (
+                  <span className="ml-2 text-xs opacity-70">{tab.count}</span>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Search + status filter */}
@@ -173,7 +92,7 @@ function AdminContentPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search by filename, URL, or owner..."
+                placeholder="Search by filename or URL..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full rounded border border-border bg-white py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green"
@@ -192,8 +111,17 @@ function AdminContentPage() {
             </select>
           </div>
 
-          {/* Content grid */}
-          {filtered.length === 0 ? (
+          {/* Content */}
+          {contents.isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />
+              <span className="ml-2 text-muted-foreground">Loading content...</span>
+            </div>
+          ) : contents.isError ? (
+            <div className="py-16 text-center text-red-600">
+              Failed to load content. Is the API running?
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">No content found.</div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -205,29 +133,27 @@ function AdminContentPage() {
                   {/* Title + status */}
                   <div className="mb-3 flex items-start justify-between gap-2">
                     <h3 className="text-base font-semibold text-foreground leading-snug">
-                      {item.filename}
+                      {item.filename ?? "Untitled"}
                     </h3>
                     <span
-                      className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[item.document_status]}`}
+                      className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[item.document_status ?? ""] ?? "bg-muted text-muted-foreground"}`}
                     >
-                      {item.document_status}
+                      {item.document_status ?? "—"}
                     </span>
                   </div>
 
-                  {/* Type */}
+                  {/* Type + position */}
                   <p className="mb-3 text-xs text-muted-foreground">
-                    {item.content_type}
+                    {item.content_type ?? "—"} · {item.job_position ?? "—"}
                   </p>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-semibold ${POSITION_BADGE[item.job_position]}`}
-                    >
-                      {POSITION_LABELS[item.job_position]}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(item.last_modified).toLocaleDateString()}
+                  {/* Footer — owner + date */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{item.employee?.employee_name ?? item.content_owner ?? "Unassigned"}</span>
+                    <span>
+                      {item.last_modified
+                        ? new Date(item.last_modified).toLocaleDateString()
+                        : "—"}
                     </span>
                   </div>
                 </div>
