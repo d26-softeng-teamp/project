@@ -17,6 +17,14 @@ async function createContextInner(authToken: string | null) {
     user = supabaseUser;
   }
 
+  //DEVELOPMENT FAKE USER
+  if (!user && process.env.NODE_ENV === "development") {
+    user = {
+      id: "dev-test-user-123",
+      email: "dev@test.com",
+    };
+  }
+
   return { supabase, prisma, user };
 }
 
