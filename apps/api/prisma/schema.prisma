@@ -6,6 +6,17 @@ datasource db {
   provider = "postgresql"
 }
 
+model AppUser {
+  id           String   @id @default(cuid())
+  username     String   @unique @db.VarChar(50)
+  password     String   @db.VarChar(100)
+  role         String   @db.VarChar(20)
+  display_name String?  @db.VarChar(100)
+  created_at   DateTime @default(now())
+
+  @@map("app_user")
+}
+
 model Employee {
   employeeID    String  @id @db.Char(10)
   employee_name String? @db.VarChar(50)

@@ -5,6 +5,24 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
+  // ── App Users ─────────────────────────────────────────────────────────────
+  await prisma.appUser.deleteMany();
+
+  await Promise.all([
+    prisma.appUser.create({
+      data: { username: "admin", password: "admin", role: "admin", display_name: "Administrator" },
+    }),
+    prisma.appUser.create({
+      data: { username: "emp1", password: "emp1", role: "underwriter", display_name: "Employee 1" },
+    }),
+    prisma.appUser.create({
+      data: { username: "emp2", password: "emp2", role: "business-analyst", display_name: "Employee 2" },
+    }),
+  ]);
+
+  console.log("Seeded 3 app users.");
+
+  // ── Employees + Content ───────────────────────────────────────────────────
   await prisma.contentManagement.deleteMany();
   await prisma.employee.deleteMany();
 

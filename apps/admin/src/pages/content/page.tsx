@@ -9,12 +9,6 @@ const STATUS_STYLES: Record<string, string> = {
   Archived: "bg-gray-400 text-white",
 };
 
-const ROLE_TABS = [
-  { key: "all", label: "All Users" },
-  { key: "underwriter", label: "Underwriter" },
-  { key: "business-analyst", label: "Business Analyst" },
-];
-
 function matchesRole(jobPosition: string | null, role: string): boolean {
   if (role === "all") return true;
   const pos = jobPosition?.toLowerCase() ?? "";
@@ -36,6 +30,20 @@ function AdminContentPage() {
   const allItems = contents.data ?? [];
   const filtered = allItems.filter((item) => matchesRole(item.job_position, roleFilter));
 
+  const roleTabs = [
+    { key: "all", label: "All Users", count: allItems.length },
+    {
+      key: "underwriter",
+      label: "Underwriter",
+      count: allItems.filter((item) => matchesRole(item.job_position, "underwriter")).length,
+    },
+    {
+      key: "business-analyst",
+      label: "Business Analyst",
+      count: allItems.filter((item) => matchesRole(item.job_position, "business-analyst")).length,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <div className="py-12">
@@ -51,7 +59,7 @@ function AdminContentPage() {
 
           {/* Role filter tabs */}
           <div className="mb-6 flex items-center gap-2">
-            {ROLE_TABS.map((tab) => (
+            {roleTabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
@@ -64,9 +72,7 @@ function AdminContentPage() {
               >
                 {tab.label}
                 {!contents.isLoading && (
-                  <span className="ml-2 text-xs opacity-70">
-                    {allItems.filter((item) => matchesRole(item.job_position, tab.key)).length}
-                  </span>
+                  <span className="ml-2 text-xs opacity-70">{tab.count}</span>
                 )}
               </button>
             ))}
