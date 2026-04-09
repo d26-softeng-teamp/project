@@ -4,23 +4,25 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["auth", "public"]
 }
 
 /// public.users — unified profile row for every Supabase Auth user.
 model UserProfile {
-  id             String   @id @db.Uuid
-  email          String
-  name           String
-  portal         String
-  role           String
-  employee_code  String?  @unique @db.VarChar(10)
-  job_desc       String?  @db.VarChar(200)
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  id            String   @id @db.Uuid
+  email         String
+  name          String
+  portal        String
+  role          String
+  employee_code String?  @unique @db.VarChar(10)
+  job_desc      String?  @db.VarChar(200)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   owned_content ContentManagement[]
 
   @@map("users")
+  @@schema("auth")
 }
 
 model ContentManagement {
@@ -37,4 +39,5 @@ model ContentManagement {
   owner UserProfile? @relation(fields: [owner_id], references: [id])
 
   @@map("content_management")
+  @@schema("auth")
 }

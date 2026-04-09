@@ -31,9 +31,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
+    "@prisma/config": "^7.7.0",
+    "prisma": "^7.7.0",
     "supabase": "^2.88.1",
+    "tsx": "^4.21.0",
     "turbo": "^2.5.0",
     "typescript": "^5.8.0",
     "vitest": "^3.1.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.7.0",
+    "dotenv": "^16.6.1"
   }
 }
