@@ -28,13 +28,13 @@
   "dependencies": {
     "@myapp/types": "workspace:*",
     "@myapp/utils": "workspace:*",
-    "@prisma/adapter-pg": "^7.6.0",
-    "@prisma/client": "^7.6.0",
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
     "@supabase/supabase-js": "^2.49.0",
     "@trpc/server": "^11.0.0",
     "dotenv": "^16.6.1",
     "pg": "^8.20.0",
-    "prisma": "^7.6.0",
+    "prisma": "^7.7.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

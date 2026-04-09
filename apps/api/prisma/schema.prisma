@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["auth", "public"]
+  schemas  = ["public", "auth"]
 }
 
 /// public.users — unified profile row for every Supabase Auth user.
