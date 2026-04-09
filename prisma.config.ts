@@ -4,7 +4,7 @@ import { defineConfig } from "@prisma/config";
 
 export default defineConfig({
   earlyAccess: true,
-  schema: path.join(__dirname, "schema.prisma"),
+  schema: path.join(__dirname, "apps", "api", "prisma", "schema.prisma"),
 
   datasource: {
     url: process.env.DATABASE_URL!,
