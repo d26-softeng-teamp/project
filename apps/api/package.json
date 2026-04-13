@@ -9,17 +9,20 @@
     }
   },
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "node -e \"if (process.env.CI) process.exit(0); require('child_process').execSync('prisma generate', { stdio: 'inherit' })\"",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && node build.mjs",
     "start": "node dist/server.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
-    "db:push": "node --import ./load-env-pre.js ./node_modules/prisma/build/index.js db push --accept-data-loss",
+    "db:push": "node --import ./load-env-pre.js ./node_modules/prisma/build/index.js db push",
+    "db:push:remote": "node --import ./run-prisma-remote.js ./node_modules/prisma/build/index.js db push",
+    "db:push:remote:debug": "DEBUG=\"prisma:*\" node --import ./run-prisma-remote.js ./node_modules/prisma/build/index.js db push",
     "db:migrate": "node --import ./load-env-pre.js ./node_modules/prisma/build/index.js migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:remote": "node --import ./run-prisma-remote.js --import ./load-env-pre.js ./node_modules/prisma/build/index.js db seed",
     "db:studio": "node --import ./load-env-pre.js ./node_modules/prisma/build/index.js studio"
   },
   "prisma": {

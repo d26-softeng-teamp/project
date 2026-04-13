@@ -9,7 +9,7 @@ export const loginSchema = z.object({
 export const loginPortalSchema = z.enum(["employee", "admin"]);
 
 export const loginWithPortalSchema = loginSchema.extend({
-  portal: loginPortalSchema,
+  portal: loginPortalSchema.optional(),
 });
 
 export type Login = z.infer<typeof loginSchema>;

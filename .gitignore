@@ -14,6 +14,7 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.database.remote
 
 # Supabase
 supabase/.temp/

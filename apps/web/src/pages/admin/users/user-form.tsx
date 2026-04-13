@@ -78,7 +78,6 @@ function UserFormPage() {
 
   const createMutation = trpc.user.adminCreate.useMutation({
     onSuccess: async () => {
-      // Wait so the list query is stale/refetched before /users remounts (avoids showing cached rows).
       await utils.user.invalidate();
       navigate("/users");
     },

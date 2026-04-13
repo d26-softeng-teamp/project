@@ -1,5 +1,6 @@
 -- Local development only — runs after migrations on `supabase db reset`.
 -- Creates two Auth users; `on_auth_user_created` also inserts `public.users`.
+-- Keep in sync with `apps/api/prisma/ensure-demo-users.ts` (Prisma db seed).
 --
 -- | Email               | Role / purpose        | Password          |
 -- |---------------------|----------------------|-------------------|

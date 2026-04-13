@@ -14,12 +14,14 @@ import { useSession } from "@/auth/session-context";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import AccountPage from "@/pages/account/page.tsx";
+import UsersPage from "@/pages/admin/users/page.tsx";
+import UserFormPage from "@/pages/admin/users/user-form.tsx";
 import BusinessAnalystPage from "@/pages/business-analyst/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
-import ContentListPage from "@/pages/content/page.tsx";
 import EmployeeDetailPage from "@/pages/employees/employee-detail.tsx";
 import EmployeesPage from "@/pages/employees/page.tsx";
 import HeroLayout from "@/pages/hero/layout.tsx";
+import RoleAwareContentPage from "@/pages/hero/role-content.tsx";
 import LoginFormPage from "@/pages/login.tsx";
 import UnderwriterPage from "@/pages/underwriter/page.tsx";
 
@@ -28,11 +30,7 @@ function LegacyContentEditRedirect() {
   return <Navigate to={`/hero/content/${id}/edit`} replace />;
 }
 
-const WEB_APP_NOTICE = "You were signed out. Please sign in again.";
-
-function canUseWebApp(portal: string | undefined) {
-  return portal === "employee" || portal === "admin";
-}
+const SIGNED_OUT_NOTICE = "You were signed out. Please sign in again.";
 
 function AuthSplash() {
   return (
@@ -42,28 +40,51 @@ function AuthSplash() {
   );
 }
 
-function WebLoginRoute() {
+/** Login route — redirects already-authenticated users to /hero. */
+function LoginRoute() {
   const { session, loading: sessionLoading } = useSession();
   const location = useLocation();
-  const state = location.state as { from?: string; notice?: string } | null;
+  const state = location.state as { notice?: string } | null;
 
   const accessQuery = trpc.user.myAccess.useQuery(undefined, {
     enabled: Boolean(session),
   });
-
-  const loading = sessionLoading || (Boolean(session) && accessQuery.isLoading);
 
   if (sessionLoading) return <AuthSplash />;
   if (session && accessQuery.isError) {
     void supabase.auth.signOut();
     return <AuthSplash />;
   }
-  if (loading) return <AuthSplash />;
-  if (session && canUseWebApp(accessQuery.data?.portal)) return <Navigate to="/hero" replace />;
+  if (session && accessQuery.isLoading) return <AuthSplash />;
+  if (session && accessQuery.data) {
+    return <Navigate to="/hero" replace />;
+  }
 
-  return <LoginFormPage portal="employee" defaultRedirect="/hero" bannerText={state?.notice} />;
+  return <LoginFormPage bannerText={state?.notice} />;
 }
 
+/** Nav items for admin role. */
+function adminNavItems() {
+  return [
+    { label: "Content", to: "/hero/content" },
+    { label: "User Management", to: "/users" },
+  ];
+}
+
+/** Nav items for employee roles (underwriter / business-analyst). */
+function employeeNavItems(role: string | undefined) {
+  const jobNav =
+    role === "business-analyst"
+      ? ({ label: "Business Analyst", to: "/business-analyst" } as const)
+      : ({ label: "Underwriter", to: "/underwriter" } as const);
+  return [
+    { label: "Content", to: "/hero/content" },
+    { label: jobNav.label, to: jobNav.to },
+    { label: "Coworkers", to: "/employees" },
+  ];
+}
+
+/** Layout wrapper that protects routes behind authentication and shows role-appropriate nav. */
 function ProtectedLayout() {
   const { session, loading: sessionLoading } = useSession();
   const location = useLocation();
@@ -73,31 +94,19 @@ function ProtectedLayout() {
     enabled: Boolean(session),
   });
 
-  const loading = sessionLoading || (Boolean(session) && accessQuery.isLoading);
-
   if (sessionLoading) return <AuthSplash />;
   if (!session) {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   if (accessQuery.isError) {
     void supabase.auth.signOut();
-    return <Navigate to="/login" replace state={{ notice: WEB_APP_NOTICE }} />;
+    return <Navigate to="/login" replace state={{ notice: SIGNED_OUT_NOTICE }} />;
   }
-  if (loading) return <AuthSplash />;
-  if (!canUseWebApp(accessQuery.data?.portal)) {
-    void supabase.auth.signOut();
-    return <Navigate to="/login" replace state={{ notice: WEB_APP_NOTICE }} />;
-  }
+  if (accessQuery.isLoading) return <AuthSplash />;
 
-  const jobNav =
-    accessQuery.data?.role === "business-analyst"
-      ? ({ label: "Business Analyst", to: "/business-analyst" } as const)
-      : ({ label: "Underwriter", to: "/underwriter" } as const);
-  const navItems = [
-    { label: "Content", to: "/hero/content" },
-    { label: jobNav.label, to: jobNav.to },
-    { label: "Coworkers", to: "/employees" },
-  ];
+  const role = accessQuery.data?.role;
+  const isAdmin = role === "admin";
+  const navItems = isAdmin ? adminNavItems() : employeeNavItems(role);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -116,31 +125,56 @@ function ProtectedLayout() {
   );
 }
 
+/** Guard that only renders children for admin-role users; others get redirected home. */
+function AdminOnly() {
+  const accessQuery = trpc.user.myAccess.useQuery();
+  if (accessQuery.isLoading) return <AuthSplash />;
+  if (accessQuery.data?.role !== "admin") {
+    return <Navigate to="/hero" replace />;
+  }
+  return <Outlet />;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<WebLoginRoute />} />
+        <Route path="/login" element={<LoginRoute />} />
+
         <Route element={<ProtectedLayout />}>
+          {/* Main hero page — content view adapts to role */}
           <Route path="/" element={<Navigate to="/hero" replace />} />
           <Route path="/hero" element={<HeroLayout />}>
-            <Route index element={<ContentListPage />} />
+            <Route index element={<RoleAwareContentPage />} />
             <Route path="content">
-              <Route index element={<ContentListPage />} />
+              <Route index element={<RoleAwareContentPage />} />
               <Route path="new" element={<ContentFormPage />} />
               <Route path=":id/edit" element={<ContentFormPage />} />
             </Route>
           </Route>
-          <Route path="/content" element={<Navigate to="/hero/content" replace />} />
+
+          {/* Employee role pages */}
           <Route path="/underwriter" element={<UnderwriterPage />} />
           <Route path="/business-analyst" element={<BusinessAnalystPage />} />
-          <Route path="/businessAnalyst" element={<Navigate to="/business-analyst" replace />} />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+
+          {/* Admin-only: user management */}
+          <Route element={<AdminOnly />}>
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users/new" element={<UserFormPage />} />
+            <Route path="/users/:id" element={<UserFormPage />} />
+          </Route>
+
+          {/* Shared */}
+          <Route path="/account" element={<AccountPage />} />
+
+          {/* Legacy redirects */}
+          <Route path="/content" element={<Navigate to="/hero/content" replace />} />
           <Route path="/content/new" element={<Navigate to="/hero/content/new" replace />} />
           <Route path="/content/:id/edit" element={<LegacyContentEditRedirect />} />
+          <Route path="/businessAnalyst" element={<Navigate to="/business-analyst" replace />} />
           <Route path="/dashboard" element={<Navigate to="/hero" replace />} />
-          <Route path="/account" element={<AccountPage />} />
           <Route path="*" element={<Navigate to="/hero" replace />} />
         </Route>
       </Routes>

@@ -105,7 +105,7 @@ function UsersPage() {
                         <RoleBadge role={user.role} />
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {user.employee_code ?? "—"}
+                        {user.employee_code ?? "\u2014"}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">

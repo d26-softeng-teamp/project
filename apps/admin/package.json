@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
-    "build": "tsc -b && vite build",
+    "build": "pnpm --filter @myapp/api exec prisma generate && tsc -b && vite build",
     "start": "serve -s dist -l ${PORT:-3000}",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm --filter @myapp/api exec prisma generate && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -1,4 +1,7 @@
 import "dotenv/config";
+import "../load-env-pre.js";
+import { prisma } from "../src/lib/prisma";
+import { DEMO_ADMIN_EMAIL, DEMO_USER_EMAIL, ensureDemoAuthAndProfiles } from "./ensure-demo-users";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
@@ -16,20 +19,37 @@ const prisma = new PrismaClient({
 async function main() {
   console.log("Seeding database...");
 
+  const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'content_management'
+    ) AS exists
+  `;
+  if (!rows[0]?.exists) {
+    console.error(
+      "Missing table public.content_management. Apply Supabase migrations first, e.g. from repo root:\n" +
+        "  pnpm db:start   # if local stack is not running\n" +
+        "  pnpm db:reset   # migrations + supabase/seed.sql (demo Auth users)\n" +
+        "Then ensure DATABASE_URL matches local Postgres (see .env.example).",
+    );
+    process.exit(1);
+  }
+
+  await ensureDemoAuthAndProfiles(prisma);
+
   await prisma.contentManagement.deleteMany();
 
   const userRow = await prisma.userProfile.findFirst({
-    where: { email: "user@hanover.test" },
+    where: { email: DEMO_USER_EMAIL },
   });
   const adminRow = await prisma.userProfile.findFirst({
-    where: { email: "admin@hanover.test" },
+    where: { email: DEMO_ADMIN_EMAIL },
   });
 
   if (!userRow || !adminRow) {
-    console.warn(
-      "Skip content seed: run `supabase db reset` first so auth + public.users exist (user@hanover.test, admin@hanover.test).",
+    throw new Error(
+      `Demo profiles missing after ensureDemoAuthAndProfiles (${DEMO_USER_EMAIL}, ${DEMO_ADMIN_EMAIL}).`,
     );
-    return;
   }
 
   await Promise.all([

@@ -9,10 +9,22 @@ const HERO_CONTENT_PATH = "/hero#content-library";
 function HeroBanner() {
   const [heroExpanded, setHeroExpanded] = useState(true);
   const { data: access } = trpc.user.myAccess.useQuery();
-  const job =
-    access?.role === "business-analyst"
-      ? { to: "/business-analyst" as const, label: "Business Analyst" as const }
-      : { to: "/underwriter" as const, label: "Underwriter" as const };
+  const isAdmin = access?.role === "admin";
+
+  const quickLinks = isAdmin
+    ? [
+        { to: HERO_CONTENT_PATH, label: "Content", icon: FileText },
+        { to: "/users", label: "Users", icon: Users },
+      ]
+    : [
+        { to: HERO_CONTENT_PATH, label: "Content", icon: FileText },
+        {
+          to: access?.role === "business-analyst" ? "/business-analyst" : "/underwriter",
+          label: access?.role === "business-analyst" ? "Business Analyst" : "Underwriter",
+          icon: Shield,
+        },
+        { to: "/employees", label: "Coworkers", icon: Users },
+      ];
 
   return (
     <div
@@ -54,34 +66,21 @@ function HeroBanner() {
               Welcome to Hanover
             </h1>
 
-            <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
-              <Link
-                to={HERO_CONTENT_PATH}
-                className="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 rounded-md bg-hanover-green px-1 py-2 text-center text-white shadow-sm transition-colors hover:bg-hanover-green/90 sm:min-h-16 sm:py-2"
-              >
-                <FileText className="size-4 shrink-0 sm:size-5" aria-hidden />
-                <span className="text-[0.6rem] font-medium leading-tight sm:text-[0.65rem]">
-                  Content
-                </span>
-              </Link>
-              <Link
-                to={job.to}
-                className="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 rounded-md bg-hanover-green px-1 py-2 text-center text-white shadow-sm transition-colors hover:bg-hanover-green/90 sm:min-h-16 sm:py-2"
-              >
-                <Shield className="size-4 shrink-0 sm:size-5" aria-hidden />
-                <span className="text-[0.6rem] font-medium leading-tight sm:text-[0.65rem]">
-                  {job.label}
-                </span>
-              </Link>
-              <Link
-                to="/employees"
-                className="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 rounded-md bg-hanover-green px-1 py-2 text-center text-white shadow-sm transition-colors hover:bg-hanover-green/90 sm:min-h-16 sm:py-2"
-              >
-                <Users className="size-4 shrink-0 sm:size-5" aria-hidden />
-                <span className="text-[0.6rem] font-medium leading-tight sm:text-[0.65rem]">
-                  Coworkers
-                </span>
-              </Link>
+            <div
+              className={`mt-3 grid gap-1.5 sm:gap-2 ${quickLinks.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}
+            >
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 rounded-md bg-hanover-green px-1 py-2 text-center text-white shadow-sm transition-colors hover:bg-hanover-green/90 sm:min-h-16 sm:py-2"
+                >
+                  <link.icon className="size-4 shrink-0 sm:size-5" aria-hidden />
+                  <span className="text-[0.6rem] font-medium leading-tight sm:text-[0.65rem]">
+                    {link.label}
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

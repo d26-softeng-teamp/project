@@ -149,7 +149,23 @@ export const userRouter = router({
         });
       }
 
-      return ctx.prisma.userProfile.findUniqueOrThrow({ where: { id: data.user.id } });
+      const userId = data.user.id;
+      const profileData = {
+        email: rest.email,
+        name: rest.name,
+        portal: rest.portal,
+        role: rest.role,
+        employee_code: employee_code ?? null,
+        job_desc: job_desc ?? null,
+      };
+
+      // Supabase trigger `handle_new_user` normally inserts `public.users`. If prod DB is missing that
+      // migration, findUnique would 500 — upsert keeps admin create working either way.
+      return ctx.prisma.userProfile.upsert({
+        where: { id: userId },
+        create: { id: userId, ...profileData },
+        update: profileData,
+      });
     }),
 
   adminUpdate: adminPortalProcedure

@@ -1,12 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import { prisma } from "./lib/prisma";
+import { createSupabaseClient } from "./lib/supabase";
 
 /**
  * Inner context builder — adapter-agnostic. Takes an auth token directly.
  */
 async function createContextInner(authToken: string | null) {
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+  const supabase = createSupabaseClient();
 
   let user = null;
 
