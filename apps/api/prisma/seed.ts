@@ -2,19 +2,6 @@ import "dotenv/config";
 import "../load-env-pre.js";
 import { prisma } from "../src/lib/prisma";
 import { DEMO_ADMIN_EMAIL, DEMO_USER_EMAIL, ensureDemoAuthAndProfiles } from "./ensure-demo-users";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const adapter = new PrismaPg(pool);
-
-const prisma = new PrismaClient({
-  adapter,
-});
 
 async function main() {
   console.log("Seeding database...");
