@@ -1,171 +1,140 @@
-import { Loader2, Lock, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
+import { useSession } from "@/auth/session-context";
 import { trpc } from "@/lib/trpc.ts";
+import { normalizeContent } from "@/utils/normalizeContent.ts";
+import { ContentFilters } from "./components/ContentFilters";
+import { ContentGrid } from "./components/ContentGrid";
+import { useContentFilters } from "./hooks/useContentFilters";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
 
-function getStatusBadge(status: string | null) {
+const ROLE_TABS = [
+  { key: "all", label: "All Users" },
+  { key: "underwriter", label: "Underwriter" },
+  { key: "business-analyst", label: "Business Analyst" },
+  { key: "actuarial-analyst", label: "Actuarial Analyst" },
+  { key: "exl-operations", label: "EXL Operations" },
+];
+
+function getStatusBadge(status?: string | null) {
   switch (status) {
     case "Finalized":
       return "bg-hanover-green text-white";
     case "Created":
       return "bg-[#C9A84C] text-white";
     case "in-progress":
-      return "bg-blue-500 text-white";
+      return "bg-blue-500 text-white whitespace-nowrap";
     case "Archived":
       return "bg-gray-400 text-white";
     default:
       return "bg-muted text-muted-foreground";
   }
 }
+export default function ContentPage() {
+  trpc.user.myAccess.useQuery();
+  const filters = useContentFilters();
+  const debouncedSearch = useDebouncedValue(filters.search, 300);
+  const { session } = useSession();
+  const currentUserId = session?.user?.id;
 
-function ContentListPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [type, setType] = useState("");
+  const [openRole, setOpenRole] = useState(true);
+  const [openStatus, setOpenStatus] = useState(true);
+  const [openType, setOpenType] = useState(true);
+  const [openTags, setOpenTags] = useState(true);
 
   const utils = trpc.useUtils();
+
   const toggleFavorite = trpc.content.update.useMutation({
     onSuccess: () => utils.content.list.invalidate(),
   });
 
-  const contents = trpc.content.list.useQuery({
-    search,
-    document_status: status || undefined,
-    content_type: (type as "Reference" | "Workflow") || undefined,
+  const checkin = trpc.content.checkin.useMutation({
+    onSuccess: () => utils.content.list.invalidate(),
   });
 
+  const contents = trpc.content.list.useQuery({
+    search: debouncedSearch,
+    document_status: filters.status || undefined,
+    content_type: (filters.type as "Reference" | "Workflow") || undefined,
+    role: filters.role === "all" ? undefined : filters.role,
+    tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
+    tagMatchMode: filters.tagIds.length > 0 ? filters.tagMode : undefined,
+    pinnedTagId: filters.pinnedTagId ?? undefined,
+  });
+
+  const allItems = contents.data?.map(normalizeContent) ?? [];
+
+  const filtered = allItems;
+
   return (
-    <div id="content-library" className="scroll-mt-4 border-t border-border/60 py-6 sm:py-8">
+    <div className="border-t border-border/60 py-6 sm:py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by filename or URL..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded border border-border bg-background py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green"
-            />
+        <div className="mb-6 flex justify-end">
+          <div className="flex w-full max-w-4xl items-center gap-3">
+            <div className="relative flex-[2]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={filters.search}
+                onChange={(e) => filters.setSearch(e.target.value)}
+                placeholder="Search by filename or URL..."
+                className="w-full rounded border border-border bg-background py-2 pl-10 pr-4 text-sm"
+              />
+            </div>
+
+            <div className="relative">
+              <select
+                value={filters.view}
+                onChange={(e) => filters.setView(e.target.value as "grid" | "list")}
+                className="appearance-none rounded border border-border bg-background px-3 py-2 pr-8 text-sm font-medium hover:bg-muted"
+              >
+                <option value="grid">Card View</option>
+                <option value="list">List View</option>
+              </select>
+
+              <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                ▾
+              </div>
+            </div>
+
+            {/* NEW CONTENT */}
+            <Link
+              to="/hero/content/new"
+              className="flex shrink-0 items-center gap-2 rounded bg-hanover-green px-4 py-2 text-sm font-semibold text-white"
+            >
+              <Plus className="h-4 w-4" />
+              New Content
+            </Link>
           </div>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green sm:min-w-40"
-          >
-            <option value="">All Statuses</option>
-            <option value="Created">Created</option>
-            <option value="in-progress">In Progress</option>
-            <option value="Finalized">Finalized</option>
-            <option value="Archived">Archived</option>
-          </select>
-          <Link
-            to="/hero/content/new"
-            className="flex shrink-0 items-center justify-center gap-2 rounded bg-hanover-green px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hanover-green/90"
-          >
-            <Plus className="h-4 w-4" />
-            New Content
-          </Link>
-        </div>
-        <div>
-          <select
-            className="mb-5 rounded border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green sm:min-w-40"
-            value={type}
-            onChange={(click) => setType(click.target.value)}
-          >
-            <option value="">No Filter</option>
-            <option value="Reference">Reference</option>
-            <option value="Workflow">Workflow</option>
-          </select>
         </div>
 
-        {contents.isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />
-            <span className="ml-2 text-muted-foreground">Loading content...</span>
-          </div>
-        ) : contents.isError ? (
-          <div className="mx-auto max-w-lg px-4 py-16 text-center">
-            <p className="font-medium text-red-600">Could not load content.</p>
-            <p className="mt-2 break-words text-sm text-muted-foreground">
-              {contents.error instanceof Error ? contents.error.message : String(contents.error)}
-            </p>
-            <p className="mt-4 text-xs text-muted-foreground">
-              API should be at{" "}
-              {import.meta.env.VITE_API_URL ?? "http://127.0.0.1:3000 (dev default)"}. Run{" "}
-              <code className="rounded bg-muted px-1">pnpm dev</code> from the repo root.
-            </p>
-          </div>
-        ) : contents.data?.length === 0 ? (
-          <div className="py-16 text-center text-muted-foreground">No content found.</div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {contents.data?.map((item) => (
-              <Link
-                key={item.fileID}
-                to={`/hero/content/${item.fileID}/edit`}
-                className="group rounded border border-border bg-card p-5 shadow-sm transition-all hover:border-hanover-green hover:shadow-md"
-              >
-                <div className="mb-3 flex items-start justify-between">
-                  <h3 className="text-base font-semibold text-foreground group-hover:text-hanover-green">
-                    {item.filename ?? "Untitled"}
-                  </h3>
-                  <div className="ml-2 flex shrink-0 items-center gap-1">
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-semibold ${getStatusBadge(item.document_status)}`}
-                    >
-                      {item.document_status ?? "—"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleFavorite.mutate({
-                          fileID: item.fileID,
-                          is_favorited: !item.is_favorited,
-                        });
-                      }}
-                      className="text-yellow-400 hover:text-yellow-500"
-                    >
-                      {item.is_favorited ? "★" : "☆"}
-                    </button>
-                  </div>
-                </div>
-                <p className="mb-1 truncate text-xs text-muted-foreground">{item.url}</p>
-                <p className="mb-1 text-xs text-muted-foreground">
-                  {item.content_type ?? "—"} · {item.job_position ?? "—"}
-                </p>
-                {item.content_tags && item.content_tags.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1">
-                    {item.content_tags.map((ct) => (
-                      <span
-                        key={ct.tag.id}
-                        className="inline-flex items-center rounded-full bg-hanover-green/10 px-2 py-0.5 text-xs font-medium text-hanover-green ring-1 ring-hanover-green/30"
-                      >
-                        {ct.tag.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {item.is_checked_out && (
-                  <div className="mb-2 flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800">
-                    <Lock className="h-3 w-3" />
-                    Checked out
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{item.owner?.name ?? "Unassigned"}</span>
-                  <span>
-                    {item.last_modified ? new Date(item.last_modified).toLocaleDateString() : "—"}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <div className="flex gap-6">
+          {/* SIDEBAR */}
+          <ContentFilters
+            filters={filters}
+            openRole={openRole}
+            setOpenRole={setOpenRole}
+            openStatus={openStatus}
+            setOpenStatus={setOpenStatus}
+            openType={openType}
+            setOpenType={setOpenType}
+            openTags={openTags}
+            setOpenTags={setOpenTags}
+            ROLE_TABS={ROLE_TABS}
+          />
+
+          {/* Grid view */}
+          <ContentGrid
+            contents={contents}
+            filtered={filtered}
+            filters={filters}
+            currentUserId={currentUserId}
+            toggleFavorite={toggleFavorite}
+            checkin={checkin}
+            getStatusBadge={getStatusBadge}
+          />
+        </div>
       </div>
     </div>
   );
 }
-
-export default ContentListPage;

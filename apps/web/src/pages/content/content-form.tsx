@@ -2,12 +2,13 @@ import DocViewer, { DocViewerRenderers } from "@iamjariwala/react-doc-viewer";
 import { FileUpload } from "@myapp/ui/components/file-upload";
 import { TextInput } from "@myapp/ui/components/text-input";
 import "@iamjariwala/react-doc-viewer/dist/index.css";
-import { ArrowLeft, FileText, Loader2, Lock, Pencil, Unlock } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, Pencil, Unlock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useSession } from "@/auth/session-context";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { type RouterOutputs, trpc } from "@/lib/trpc.ts";
+import { renderTag } from "@/utils/tag";
 import { TagInput } from "./tag-input";
 
 function formatDateField(date: Date | string | null | undefined): string {
@@ -19,17 +20,13 @@ function toNullable<T extends string>(value: T | ""): T | null {
   return (value || null) as T | null;
 }
 
-function isImageFilename(name: string): boolean {
-  return /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
-}
-
 function displayDateLabel(value: string): string {
   if (!value?.trim()) return "—";
   const d = new Date(`${value}T12:00:00`);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
 }
 
-type TagShape = { id: number; name: string };
+type TagShape = { id: number; name: string; color?: string };
 
 type ContentFormFieldsProps = {
   isEditing: boolean;
@@ -58,13 +55,12 @@ type ContentFormFieldsProps = {
   isUploading: boolean;
   uploadProgress: number;
   uploadError: string | null;
+  canEdit: boolean;
   createError: ReturnType<typeof trpc.content.create.useMutation>["error"];
   updateError: ReturnType<typeof trpc.content.update.useMutation>["error"];
   isSaving: boolean;
   onDelete: () => void;
   onSubmit: (e: React.FormEvent) => void;
-  isCheckedOut: boolean;
-  isCheckedOutByMe: boolean;
 };
 
 function ContentMetadataReadonlyTable({
@@ -195,15 +191,23 @@ function ContentMetadataReadonlyTable({
               {selectedTags.length === 0 ? (
                 <span className="text-muted-foreground">—</span>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedTags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-flex items-center rounded-full bg-hanover-green/10 px-2.5 py-0.5 text-xs font-medium text-hanover-green ring-1 ring-hanover-green/30"
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
+                <div className="flex flex-wrap gap-x-1 gap-y-1.5">
+                  {selectedTags.map((tag) => {
+                    const styles = renderTag(tag);
+
+                    return (
+                      <span
+                        key={tag.id}
+                        style={{
+                          backgroundColor: styles.bg,
+                          color: styles.text,
+                        }}
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors hover:opacity-80"
+                      >
+                        {tag.name}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </td>
@@ -225,19 +229,15 @@ function ContentFormSummarySection({
   contentType,
   documentStatus,
   selectedTags,
-  upload,
-  acceptTypes,
   isUploading,
-  uploadProgress,
   isSaving,
   setMetadataEditMode,
+  canEdit,
   createError,
   updateError,
   mutationError,
   submitLabel,
   onDelete,
-  isCheckedOut,
-  isCheckedOutByMe,
 }: {
   filename: string;
   url: string;
@@ -255,40 +255,29 @@ function ContentFormSummarySection({
   uploadProgress: number;
   isSaving: boolean;
   setMetadataEditMode: (v: boolean) => void;
+  canEdit: boolean;
   createError: unknown;
   updateError: unknown;
   mutationError: string;
   submitLabel: string;
   onDelete: () => void;
-  isCheckedOut: boolean;
-  isCheckedOutByMe: boolean;
 }) {
   return (
     <>
-      <FileUpload
-        label="Replace file"
-        onFileSelect={upload}
-        accept={acceptTypes}
-        isUploading={isUploading}
-        progress={uploadProgress}
-        currentFileName={url ? filename : undefined}
-        disabled={isSaving}
-        compact
-        hideFileNameRow
-      />
-
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Metadata
         </h2>
-        <button
-          type="button"
-          onClick={() => setMetadataEditMode(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
-          Edit details
-        </button>
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={() => setMetadataEditMode(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            Edit details
+          </button>
+        ) : null}
       </div>
 
       <ContentMetadataReadonlyTable
@@ -310,25 +299,27 @@ function ContentFormSummarySection({
         </div>
       )}
 
-      <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={() => onDelete()}
-          disabled={isSaving || isUploading || (isCheckedOut && !isCheckedOutByMe)}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-red-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-500/90 disabled:opacity-60"
-        >
-          {(isSaving || isUploading) && <Loader2 className="h-4 w-4 animate-spin" />}
-          Delete Content
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving || isUploading}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-hanover-green px-6 py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90 disabled:opacity-60"
-        >
-          {(isSaving || isUploading) && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitLabel}
-        </button>
-      </div>
+      {canEdit ? (
+        <div className="flex justify-between">
+          <button
+            type="button"
+            onClick={() => onDelete()}
+            disabled={isSaving || isUploading}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-red-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-500/90 disabled:opacity-60"
+          >
+            {(isSaving || isUploading) && <Loader2 className="h-4 w-4 animate-spin" />}
+            Delete Content
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving || isUploading}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-hanover-green px-6 py-3 font-semibold text-white transition-colors hover:bg-hanover-green/90 disabled:opacity-60"
+          >
+            {(isSaving || isUploading) && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitLabel}
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -364,35 +355,6 @@ function ContentFormDraftSection({
         disabled={isSaving}
       />
 
-      {isEditing && url ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-muted/30">
-          <div className="flex min-h-35 max-h-48 items-center justify-center bg-muted/50">
-            {isImageFilename(filename) && url ? (
-              <img src={url} alt="" className="max-h-48 max-w-full object-contain" />
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-                <FileText className="h-10 w-10 opacity-35" strokeWidth={1.25} />
-                <span className="text-xs">Preview</span>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {isEditing && url ? (
-        <FileUpload
-          label="Replace file"
-          onFileSelect={upload}
-          accept={acceptTypes}
-          isUploading={isUploading}
-          progress={uploadProgress}
-          currentFileName={url ? filename : undefined}
-          disabled={isSaving}
-          compact
-          hideFileNameRow
-        />
-      ) : null}
-
       {url && !isEditing ? (
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium text-foreground">Uploaded to:</span>
@@ -415,7 +377,6 @@ function ContentFormDraftSection({
 function ContentFormMetadataSection({
   isEditing,
   fileID,
-  setFileID,
   filename,
   setFilename,
   url,
@@ -477,17 +438,9 @@ function ContentFormMetadataSection({
 }) {
   return (
     <>
+      {fileID ? <p>File ID: {fileID}</p> : null}
       <TextInput
-        label="File ID"
-        type="text"
-        required
-        maxLength={64}
-        disabled={isEditing}
-        value={fileID}
-        onChange={(e) => setFileID(e.target.value)}
-      />
-      <TextInput
-        label="Filename"
+        label="Content Name"
         type="text"
         value={filename}
         onChange={(e) => setFilename(e.target.value)}
@@ -514,12 +467,24 @@ function ContentFormMetadataSection({
         </select>
       </div>
 
-      <TextInput
-        label="Job Position"
-        type="text"
-        value={jobPosition}
-        onChange={(e) => setJobPosition(e.target.value)}
-      />
+      <div>
+        <label htmlFor="job-position" className="mb-2 block text-sm font-semibold text-foreground">
+          Job Position
+        </label>
+        <select
+          id="job-position"
+          value={jobPosition}
+          onChange={(e) => setJobPosition(e.target.value)}
+          className="w-full rounded border border-border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-hanover-green"
+        >
+          <option value="">None</option>
+          <option value="admin">Admin</option>
+          <option value="business-analyst">Business Analyst</option>
+          <option value="underwriter">Underwriter</option>
+          <option value="actuarial-analyst">Actuarial Analyst</option>
+          <option value="exl-operations">EXL Operations</option>
+        </select>
+      </div>
       <TextInput
         label="Last Modified"
         type="date"
@@ -598,6 +563,37 @@ function ContentFormMetadataSection({
   );
 }
 
+const SUPPORTED_EXTENSIONS = [
+  "bmp",
+  "csv",
+  "odt",
+  "doc",
+  "docx",
+  "gif",
+  "htm",
+  "html",
+  "jpg",
+  "jpeg",
+  "pdf",
+  "png",
+  "ppt",
+  "pptx",
+  "tiff",
+  "txt",
+  "xls",
+  "xlsx",
+  "mp4",
+  "webp",
+];
+
+const canDisplayDocument = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+
+  const extension = url.split(/[#?]/)[0].split(".").pop()?.toLowerCase();
+  if (!extension) return false;
+  return SUPPORTED_EXTENSIONS.includes(extension);
+};
+
 function ContentFormFields({
   isEditing,
   fileID,
@@ -625,13 +621,12 @@ function ContentFormFields({
   isUploading,
   uploadProgress,
   uploadError,
+  canEdit,
   createError,
   updateError,
   isSaving,
   onDelete,
   onSubmit,
-  isCheckedOut,
-  isCheckedOutByMe,
 }: ContentFormFieldsProps) {
   const [metadataEditMode, setMetadataEditMode] = useState(false);
   const showFileSummary = isEditing && Boolean(url) && !metadataEditMode;
@@ -641,12 +636,37 @@ function ContentFormFields({
   const mutationError = createError?.message || updateError?.message || "Something went wrong.";
   const submitLabel = isUploading ? "Uploading..." : isEditing ? "Update Content" : "Save Content";
   const acceptTypes = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.gif,.svg";
-  const docs = [{ uri: url }];
-  const acceptedTypesSet = new Set(acceptTypes.split(","));
-  const fileExtension = (fileID: string): string => {
-    return fileID.slice(fileID.lastIndexOf(".")).toLowerCase().trim();
-  };
 
+  useEffect(() => {
+    if (!url) return;
+
+    const observer = new MutationObserver(() => {
+      const downloadBtn = document.querySelector("button.rdv-toolbar-btn[title='Download']");
+      if (!downloadBtn) return;
+
+      const newBtn = downloadBtn.cloneNode(true) as HTMLElement;
+      newBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename || "download";
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      });
+
+      downloadBtn.parentNode?.replaceChild(newBtn, downloadBtn);
+      observer.disconnect();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [url, filename]);
+
+  const docs = [{ uri: url }];
   return (
     <div className="border-t border-border/60 py-8 sm:py-10">
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -663,12 +683,15 @@ function ContentFormFields({
         </h1>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-md sm:p-8">
-          {acceptedTypesSet.has(fileExtension(fileID)) && url ? (
-            <div className="mb-6 text-black overflow-hidden rounded-lg border border-border bg-muted">
+          {url && canDisplayDocument(url) ? (
+            <div className="mb-6 overflow-hidden rounded-lg border border-border bg-muted">
+              <style>{`.rdv-txt-container { white-space: pre; font-family: monospace; }`}</style>
               <DocViewer
                 documents={docs}
                 pluginRenderers={DocViewerRenderers}
-                config={{ header: { disableHeader: true, disableFileName: true } }}
+                config={{
+                  header: { disableHeader: true, disableFileName: true },
+                }}
                 style={{ height: "70vh", minHeight: 800, width: "100%" }}
               />
             </div>
@@ -692,13 +715,12 @@ function ContentFormFields({
                 uploadProgress={uploadProgress}
                 isSaving={isSaving}
                 setMetadataEditMode={setMetadataEditMode}
+                canEdit={canEdit}
                 createError={createError}
                 updateError={updateError}
                 mutationError={mutationError}
                 submitLabel={submitLabel}
                 onDelete={onDelete}
-                isCheckedOut={isCheckedOut}
-                isCheckedOutByMe={isCheckedOutByMe}
               />
             ) : (
               <ContentFormDraftSection
@@ -850,6 +872,31 @@ function ContentFormPage() {
   const { session } = useSession();
   const currentUserId = session?.user?.id;
 
+  const { data: myAccess } = trpc.user.myAccess.useQuery();
+  const userRole = myAccess?.role;
+
+  function normalizeRole(value: string | null | undefined): string {
+    return (value ?? "").toLowerCase().replace(/\s+/g, "-");
+  }
+
+  const isCheckedOut = existing.data?.is_checked_out ?? false;
+  const checkedOutBy = existing.data?.checked_out_by ?? null;
+  const contentJobPosition = existing.data?.job_position;
+  const isCheckedOutByMe = isCheckedOut && checkedOutBy === currentUserId;
+  const isLockedByOther = isCheckedOut && !isCheckedOutByMe;
+
+  // Role-based permission: does the user's role match the content's job position?
+  // This determines whether they can check out the item at all.
+  const hasRoleAccess =
+    userRole === "admin" ||
+    !contentJobPosition?.trim() ||
+    (!!userRole && normalizeRole(userRole) === normalizeRole(contentJobPosition));
+
+  // canEdit: may modify form fields / save / delete.
+  // Per spec: item must be checked out by this user first.
+  // Admin bypass remains so admins can recover from bad states.
+  const canEdit = !isEditing || userRole === "admin" || (hasRoleAccess && isCheckedOutByMe);
+
   const checkout = trpc.content.checkout.useMutation({
     onSuccess: () => {
       utils.content.getById.invalidate({ fileID: id! });
@@ -871,15 +918,17 @@ function ContentFormPage() {
     },
   });
 
-  const isCheckedOut = existing.data?.is_checked_out ?? false;
-  const checkedOutBy = existing.data?.checked_out_by ?? null;
-  const isCheckedOutByMe = isCheckedOut && checkedOutBy === currentUserId;
-  const isLockedByOther = isCheckedOut && !isCheckedOutByMe;
-
   const isSaving = create.isPending || update.isPending;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    let finalID = fileID;
+    if (!fileID) {
+      finalID = url.slice(-64);
+      finalID = finalID.replace(/[^a-z0-9]/gi, "");
+      setFileID(finalID);
+    }
 
     const data = {
       filename: toNullable(filename),
@@ -896,11 +945,11 @@ function ContentFormPage() {
     };
 
     if (isEditing) {
-      data ? setPendingData({ fileID: id!, ...data }) : null;
+      data ? setPendingData({ fileID: finalID || id!, ...data }) : null;
       setAskConfirmation(true);
       setOperation("update");
     } else {
-      create.mutate({ fileID, ...data });
+      create.mutate({ fileID: finalID, ...data });
     }
   }
 
@@ -919,11 +968,22 @@ function ContentFormPage() {
     <>
       {isEditing && (
         <div className="mx-auto max-w-4xl px-4 pt-4 sm:px-6 lg:px-8">
-          {isLockedByOther && (
+          {!hasRoleAccess && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              <Lock className="h-4 w-4 shrink-0" />
+              You do not have permission to edit this content. Only the assigned employee type can
+              make changes.
+            </div>
+          )}
+          {hasRoleAccess && isLockedByOther && (
             <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950">
               <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
                 <Lock className="h-4 w-4" />
-                This file is checked out by another user. Editing is disabled.
+                This file is checked out by
+                {existing.data?.checked_out_by_user?.name
+                  ? ` ${existing.data.checked_out_by_user.name}`
+                  : " another user"}
+                . Editing is disabled.
               </div>
               {session?.user?.user_metadata?.role === "admin" && (
                 <button
@@ -942,20 +1002,20 @@ function ContentFormPage() {
               )}
             </div>
           )}
-          {!isLockedByOther && (
+          {hasRoleAccess && !isLockedByOther && (
             <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {isCheckedOutByMe ? (
                   <>
                     <Lock className="h-4 w-4 text-hanover-green" />
                     <span className="font-medium text-hanover-green">
-                      You have this file checked out
+                      You have this file checked out — you may now edit or delete it
                     </span>
                   </>
                 ) : (
                   <>
                     <Unlock className="h-4 w-4" />
-                    <span>File is available</span>
+                    <span>File is available. Check it out before editing or deleting.</span>
                   </>
                 )}
               </div>
@@ -1025,12 +1085,11 @@ function ContentFormPage() {
         isUploading={isUploading}
         uploadProgress={uploadProgress}
         uploadError={uploadError}
+        canEdit={canEdit}
         createError={create.error}
         updateError={update.error}
         isSaving={isSaving}
         onDelete={handleDelete}
-        isCheckedOut={isCheckedOut}
-        isCheckedOutByMe={isCheckedOutByMe}
         onSubmit={handleSubmit}
       />
       {askConfirmation && (

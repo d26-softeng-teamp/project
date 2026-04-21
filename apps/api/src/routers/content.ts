@@ -14,6 +14,11 @@ const ownerSelect = {
   role: true,
 } as const;
 
+const checkedOutByUserSelect = {
+  id: true,
+  name: true,
+} as const;
+
 const tagsInclude = {
   content_tags: {
     include: {
@@ -25,17 +30,46 @@ const tagsInclude = {
 function assertCanEdit(
   file: { is_checked_out: boolean; checked_out_by: string | null } | null,
   userId: string,
+  userRole?: string | null,
 ) {
   if (!file) throw new Error("File not found");
-  if (file.is_checked_out && file.checked_out_by !== userId) {
-    throw new Error("This file is checked out by another user");
+  if (userRole === "admin") return;
+  if (!file.is_checked_out || file.checked_out_by !== userId) {
+    throw new Error("You must check out this item before modifying or deleting it");
   }
+}
+
+function normalizeRole(role?: string | null) {
+  return (role ?? "").toLowerCase().replace(/\s+/g, "-").trim();
+}
+
+function canEditForRole(
+  userRole: string | null | undefined,
+  jobPosition: string | null | undefined,
+): boolean {
+  if (!userRole) return false;
+  if (userRole === "admin") return true;
+  if (!jobPosition?.trim()) return true;
+  return normalizeRole(userRole) === normalizeRole(jobPosition);
 }
 
 export const contentRouter = router({
   checkout: publicProcedure.input(contentIdSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) throw new Error("Not authenticated");
+
+    const profile = ctx.profile as { role: string | null } | null;
+    const userRole = profile?.role;
+
+    const file = await ctx.prisma.contentManagement.findUnique({
+      where: { fileID: input.fileID },
+      select: { is_checked_out: true, checked_out_by: true, job_position: true },
+    });
+    if (!file) throw new Error("File not found");
+
+    if (!canEditForRole(userRole, file.job_position)) {
+      throw new Error("You do not have permission to edit this content");
+    }
 
     const result = await ctx.prisma.contentManagement.updateMany({
       where: {
@@ -119,6 +153,19 @@ export const contentRouter = router({
       where.owner_id = input.owner_id;
     }
 
+    if (input.role && input.role !== "all") {
+      const role = input.role.toLowerCase();
+
+      where.job_position = {
+        in: [
+          role,
+          role.toLowerCase(),
+          role.replace(/-/g, " "),
+          role.charAt(0).toUpperCase() + role.slice(1).replace(/-/g, " "),
+        ],
+      };
+    }
+
     if (input.search) {
       where.OR = [
         { filename: { contains: input.search, mode: "insensitive" } },
@@ -126,14 +173,35 @@ export const contentRouter = router({
       ];
     }
 
-    return ctx.prisma.contentManagement.findMany({
+    if (input.tagIds && input.tagIds.length > 0) {
+      const mode = input.tagMatchMode ?? "any";
+      if (mode === "all") {
+        where.AND = input.tagIds.map((id) => ({
+          content_tags: { some: { tagId: id } },
+        }));
+      } else {
+        where.content_tags = { some: { tagId: { in: input.tagIds } } };
+      }
+    }
+
+    const results = await ctx.prisma.contentManagement.findMany({
       where,
       orderBy: [{ is_favorited: "desc" }, { last_modified: "desc" }],
       include: {
         owner: { select: ownerSelect },
+        checked_out_by_user: { select: checkedOutByUserSelect },
         ...tagsInclude,
       },
     });
+
+    if (input.pinnedTagId !== undefined) {
+      const pinnedId = input.pinnedTagId;
+      const pinned = results.filter((r) => r.content_tags.some((ct) => ct.tagId === pinnedId));
+      const unpinned = results.filter((r) => !r.content_tags.some((ct) => ct.tagId === pinnedId));
+      return [...pinned, ...unpinned];
+    }
+
+    return results;
   }),
 
   getById: publicProcedure.input(contentIdSchema).query(async ({ ctx, input }) => {
@@ -148,6 +216,7 @@ export const contentRouter = router({
             job_desc: true,
           },
         },
+        checked_out_by_user: { select: checkedOutByUserSelect },
         ...tagsInclude,
       },
     });
@@ -174,6 +243,7 @@ export const contentRouter = router({
           : data,
       include: {
         owner: { select: ownerSelect },
+        checked_out_by_user: { select: checkedOutByUserSelect },
         ...tagsInclude,
       },
     });
@@ -198,11 +268,18 @@ export const contentRouter = router({
       const userId = ctx.user?.id;
       if (!userId) throw new Error("Not authenticated");
 
+      const profile = ctx.profile as { role: string | null } | null;
+      const userRole = profile?.role;
+
       const file = await ctx.prisma.contentManagement.findUnique({
         where: { fileID },
       });
 
-      assertCanEdit(file, userId);
+      assertCanEdit(file, userId, userRole);
+
+      if (!canEditForRole(userRole, file?.job_position)) {
+        throw new Error("You do not have permission to edit this content");
+      }
 
       const result =
         tagIds !== undefined
@@ -218,6 +295,7 @@ export const contentRouter = router({
               } as Prisma.ContentManagementUpdateInput,
               include: {
                 owner: { select: ownerSelect },
+                checked_out_by_user: { select: checkedOutByUserSelect },
                 ...tagsInclude,
               },
             })
@@ -229,6 +307,7 @@ export const contentRouter = router({
               } as Prisma.ContentManagementUncheckedUpdateInput,
               include: {
                 owner: { select: ownerSelect },
+                checked_out_by_user: { select: checkedOutByUserSelect },
                 ...tagsInclude,
               },
             });
@@ -249,12 +328,15 @@ export const contentRouter = router({
     const userId = ctx.user?.id;
     if (!userId) throw new Error("Not authenticated");
 
+    const profile = ctx.profile as { role: string | null } | null;
+    const userRole = profile?.role;
+
     const file = await ctx.prisma.contentManagement.findUnique({
       where: { fileID: input.fileID },
     });
 
     if (!file) throw new Error("File not found");
-    assertCanEdit(file, userId);
+    assertCanEdit(file, userId, userRole);
 
     const result = await ctx.prisma.contentManagement.delete({
       where: { fileID: input.fileID },

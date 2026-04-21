@@ -18,12 +18,13 @@ import UsersPage from "@/pages/admin/users/page.tsx";
 import UserFormPage from "@/pages/admin/users/user-form.tsx";
 import BusinessAnalystPage from "@/pages/business-analyst/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
+import ContentPage from "@/pages/content/page.tsx";
 import DashboardPage from "@/pages/dashboard/page.tsx";
 import EmployeeDetailPage from "@/pages/employees/employee-detail.tsx";
 import EmployeesPage from "@/pages/employees/page.tsx";
 import HeroLayout from "@/pages/hero/layout.tsx";
-import RoleAwareContentPage from "@/pages/hero/role-content.tsx";
 import LoginFormPage from "@/pages/login.tsx";
+import TagsPage from "@/pages/tags/TagsPage";
 import UnderwriterPage from "@/pages/underwriter/page.tsx";
 
 function LegacyContentEditRedirect() {
@@ -69,19 +70,15 @@ function adminNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
     { label: "User Management", to: "/users" },
+    { label: "Tags", to: "/tags" },
     { label: "Dashboard", to: "/dashboard" },
   ];
 }
 
-/** Nav items for employee roles (underwriter / business-analyst). */
-function employeeNavItems(role: string | undefined) {
-  const jobNav =
-    role === "business-analyst"
-      ? ({ label: "Business Analyst", to: "/business-analyst" } as const)
-      : ({ label: "Underwriter", to: "/underwriter" } as const);
+/** Nav items for employee roles. */
+function employeeNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
-    { label: jobNav.label, to: jobNav.to },
     { label: "Coworkers", to: "/employees" },
   ];
 }
@@ -108,7 +105,7 @@ function ProtectedLayout() {
 
   const role = accessQuery.data?.role;
   const isAdmin = role === "admin";
-  const navItems = isAdmin ? adminNavItems() : employeeNavItems(role);
+  const navItems = isAdmin ? adminNavItems() : employeeNavItems();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -151,9 +148,9 @@ function App() {
           {/* Main hero page — content view adapts to role */}
           <Route path="/" element={<Navigate to="/hero" replace />} />
           <Route path="/hero" element={<HeroLayout />}>
-            <Route index element={<RoleAwareContentPage />} />
+            <Route index element={<ContentPage />} />
             <Route path="content">
-              <Route index element={<RoleAwareContentPage />} />
+              <Route index element={<ContentPage />} />
               <Route path="new" element={<ContentFormPage />} />
               <Route path=":id/edit" element={<ContentFormPage />} />
             </Route>
@@ -170,6 +167,7 @@ function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/new" element={<UserFormPage />} />
             <Route path="/users/:id" element={<UserFormPage />} />
+            <Route path="/tags" element={<TagsPage />} />
           </Route>
 
           {/* Shared */}

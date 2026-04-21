@@ -25,6 +25,10 @@ export const contentListQuerySchema = z.object({
   content_type: z.enum(["Reference", "Workflow"]).optional(),
   owner_id: z.string().uuid().optional(),
   search: z.string().optional(),
+  role: z.string().optional(),
+  tagIds: z.array(z.number().int()).optional(),
+  tagMatchMode: z.enum(["any", "all"]).optional(),
+  pinnedTagId: z.number().int().optional(),
 });
 
 export const tagIdSchema = z.object({
@@ -33,6 +37,10 @@ export const tagIdSchema = z.object({
 
 export const createTagSchema = z.object({
   name: z.string().min(1).max(100),
+  color: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{6})$/)
+    .optional(),
 });
 
 export type ContentId = z.infer<typeof contentIdSchema>;

@@ -2,7 +2,13 @@ import { z } from "zod";
 
 export const userPortalSchema = z.enum(["employee", "admin"]);
 
-export const accountRoleSchema = z.enum(["admin", "underwriter", "business-analyst"]);
+export const accountRoleSchema = z.enum([
+  "admin",
+  "underwriter",
+  "business-analyst",
+  "actuarial-analyst",
+  "exl-operations",
+]);
 
 export const userIdSchema = z.object({
   id: z.string().uuid(),

@@ -5,12 +5,20 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { trpc } from "@/lib/trpc";
 
-const ROLES: AccountRole[] = ["admin", "underwriter", "business-analyst"];
+const ROLES: AccountRole[] = [
+  "admin",
+  "underwriter",
+  "business-analyst",
+  "actuarial-analyst",
+  "exl-operations",
+];
 
 const ROLE_LABELS: Record<AccountRole, string> = {
   admin: "Admin",
   underwriter: "Underwriter",
   "business-analyst": "Business Analyst",
+  "actuarial-analyst": "Actuarial Analyst",
+  "exl-operations": "EXL Operations",
 };
 
 const PORTALS: UserPortal[] = ["employee", "admin"];

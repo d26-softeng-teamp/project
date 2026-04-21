@@ -6,12 +6,20 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { trpc } from "@/lib/trpc";
 
-const ROLES: AccountRole[] = ["admin", "underwriter", "business-analyst"];
+const ROLES: AccountRole[] = [
+  "admin",
+  "underwriter",
+  "business-analyst",
+  "actuarial-analyst",
+  "exl-operations",
+];
 
 const ROLE_LABELS: Record<AccountRole, string> = {
   admin: "Admin",
   underwriter: "Underwriter",
   "business-analyst": "Business Analyst",
+  "actuarial-analyst": "Actuarial Analyst",
+  "exl-operations": "EXL Operations",
 };
 
 /** Derive portal from role — admin role gets admin portal, everyone else gets employee. */

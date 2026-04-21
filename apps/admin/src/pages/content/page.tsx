@@ -1,4 +1,6 @@
-import { Loader2, Search } from "lucide-react";
+// Canonical content page lives in apps/web/src/pages/content/page.tsx.
+// Keep this file in sync with any card-level UI changes made there.
+import { Loader2, Lock, Search } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 
@@ -6,6 +8,8 @@ const ROLE_TABS = [
   { key: "all", label: "All Users" },
   { key: "underwriter", label: "Underwriter" },
   { key: "business-analyst", label: "Business Analyst" },
+  { key: "actuarial-analyst", label: "Actuarial Analyst" },
+  { key: "exl-operations", label: "EXL Operations" },
 ];
 
 function getStatusBadge(status: string | null) {
@@ -28,6 +32,8 @@ function matchesOwnerRole(owner: { role: string } | null | undefined, role: stri
   const r = owner?.role ?? "";
   if (role === "underwriter") return r === "underwriter";
   if (role === "business-analyst") return r === "business-analyst";
+  if (role === "actuarial-analyst") return r === "actuarial-analyst";
+  if (role === "exl-operations") return r === "exl-operations";
   return false;
 }
 
@@ -35,10 +41,12 @@ function AdminContentPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
 
   const contents = trpc.content.list.useQuery({
     search,
     document_status: statusFilter || undefined,
+    content_type: (typeFilter as "Reference" | "Workflow") || undefined,
   });
 
   const allItems = contents.data ?? [];
@@ -92,6 +100,15 @@ function AdminContentPage() {
               <option value="Finalized">Finalized</option>
               <option value="Archived">Archived</option>
             </select>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green sm:min-w-40"
+            >
+              <option value="">All Types</option>
+              <option value="Reference">Reference</option>
+              <option value="Workflow">Workflow</option>
+            </select>
           </div>
         </div>
 
@@ -126,11 +143,27 @@ function AdminContentPage() {
                     {item.document_status ?? "—"}
                   </span>
                 </div>
-
-                <p className="mb-3 text-xs text-muted-foreground">
+                <p className="mb-1 text-xs text-muted-foreground">
                   {item.content_type ?? "—"} · {item.job_position ?? "—"}
                 </p>
-
+                {item.content_tags && item.content_tags.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    {item.content_tags.map((ct) => (
+                      <span
+                        key={ct.tag.id}
+                        className="inline-flex items-center rounded-full bg-hanover-green/10 px-2 py-0.5 text-xs font-medium text-hanover-green ring-1 ring-hanover-green/30"
+                      >
+                        {ct.tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {item.is_checked_out && (
+                  <div className="mb-2 flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800">
+                    <Lock className="h-3 w-3" />
+                    Checked out
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{item.owner?.name ?? "Unassigned"}</span>
                   <span>
