@@ -19,7 +19,8 @@ import UserFormPage from "@/pages/admin/users/user-form.tsx";
 import BusinessAnalystPage from "@/pages/business-analyst/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
 import ContentPage from "@/pages/content/page.tsx";
-import DashboardPage from "@/pages/dashboard/page.tsx";
+import AdminDashboardPage from "@/pages/dashboard/admin-dashboard.tsx";
+import UserDashboardPage from "@/pages/dashboard/user-dashboard.tsx";
 import EmployeeDetailPage from "@/pages/employees/employee-detail.tsx";
 import EmployeesPage from "@/pages/employees/page.tsx";
 import HeroLayout from "@/pages/hero/layout.tsx";
@@ -80,6 +81,7 @@ function employeeNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
     { label: "Coworkers", to: "/employees" },
+    { label: "Dashboard", to: "/dashboard" },
   ];
 }
 
@@ -138,6 +140,13 @@ function AdminOnly() {
   return <Outlet />;
 }
 
+/** Routes to the admin or user dashboard based on the caller's role. */
+function DashboardRoute() {
+  const accessQuery = trpc.user.myAccess.useQuery();
+  if (accessQuery.isLoading) return <AuthSplash />;
+  return accessQuery.data?.role === "admin" ? <AdminDashboardPage /> : <UserDashboardPage />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -171,7 +180,7 @@ function App() {
           </Route>
 
           {/* Shared */}
-          <Route path="/dashboard/" element={<DashboardPage />} />
+          <Route path="/dashboard/" element={<DashboardRoute />} />
           <Route path="/account" element={<AccountPage />} />
 
           {/* Legacy redirects */}

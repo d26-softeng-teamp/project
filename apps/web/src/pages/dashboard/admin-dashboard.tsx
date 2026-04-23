@@ -280,7 +280,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-muted">
       <div className="py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground">
               <LayoutGrid className="h-8 w-8 text-hanover-green" />
@@ -327,7 +327,7 @@ function DashboardPage() {
           ) : loadError ? (
             <div className="mx-auto max-w-lg py-16 text-center">
               <p className="font-medium text-red-600">Could not load dashboard data.</p>
-              <p className="mt-2 break-words text-sm text-muted-foreground">
+              <p className="mt-2 wrap-break-word text-sm text-muted-foreground">
                 {loadError instanceof Error ? loadError.message : String(loadError)}
               </p>
             </div>

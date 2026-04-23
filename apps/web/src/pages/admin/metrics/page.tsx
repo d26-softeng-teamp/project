@@ -1,6 +1,25 @@
 import { Loader2 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { trpc } from "@/lib/trpc";
+
+type TrafficRange = "hour" | "day" | "week";
+
+const TRAFFIC_RANGES: { key: TrafficRange; label: string; tickInterval: number }[] = [
+  { key: "hour", label: "Hour", tickInterval: 9 },
+  { key: "day", label: "Day", tickInterval: 3 },
+  { key: "week", label: "Week", tickInterval: 0 },
+];
 
 const TOOLTIP_STYLE = {
   backgroundColor: "var(--color-card)",
@@ -38,6 +57,13 @@ export function MetricsView() {
   const auditRecent = trpc.audit.getRecent.useQuery(undefined, {
     refetchInterval: 5000,
   });
+
+  const [trafficRange, setTrafficRange] = useState<TrafficRange>("hour");
+  const requestsOverTime = trpc.metrics.getRequestsOverTime.useQuery(
+    { range: trafficRange },
+    { refetchInterval: 5000 },
+  );
+  const trafficRangeConfig = TRAFFIC_RANGES.find((r) => r.key === trafficRange) ?? TRAFFIC_RANGES[0];
 
   if (metrics.isLoading || auditSummary.isLoading) {
     return (
@@ -80,7 +106,7 @@ export function MetricsView() {
     <>
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Requests</p>
+          <p className="text-sm text-muted-foreground">Total Requests</p>
           <p className="text-xl font-bold text-foreground">{metrics.data.totalRequests ?? 0}</p>
         </div>
 
@@ -100,7 +126,66 @@ export function MetricsView() {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 lg:grid-cols-2">
+      <div className="mb-8 grid gap-4 lg:grid-cols-3">
+        <div className="rounded border border-border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-xl font-semibold text-foreground">Request Traffic</h2>
+            <div className="flex gap-1 rounded border border-border bg-muted p-0.5">
+              {TRAFFIC_RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => setTrafficRange(r.key)}
+                  className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                    trafficRange === r.key
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={requestsOverTime.data ?? []}
+                margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
+              >
+                <defs>
+                  <linearGradient id="requestTrafficFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#497728" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#497728" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  interval={trafficRangeConfig.tickInterval}
+                  tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "var(--color-muted)" }} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#497728"
+                  strokeWidth={2}
+                  fill="url(#requestTrafficFill)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="rounded border border-border bg-card p-4 shadow-sm">
           <h2 className="mb-3 text-xl font-semibold text-foreground">Document Activity</h2>
           <div className="h-72">

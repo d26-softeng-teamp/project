@@ -1,4 +1,7 @@
+import { z } from "zod";
 import { adminPortalProcedure, router } from "../lib/trpc";
+
+const rangeSchema = z.enum(["hour", "day", "week"]);
 
 export const metricsRouter = router({
   /**
@@ -25,6 +28,61 @@ export const metricsRouter = router({
       errorRate,
     };
   }),
+
+  getRequestsOverTime: adminPortalProcedure
+    .input(z.object({ range: rangeSchema }).default({ range: "hour" }))
+    .query(async ({ ctx, input }) => {
+      const now = Date.now();
+
+      const config = {
+        hour: { bucketCount: 60, bucketMs: 60 * 1000 },
+        day: { bucketCount: 24, bucketMs: 60 * 60 * 1000 },
+        week: { bucketCount: 7, bucketMs: 24 * 60 * 60 * 1000 },
+      }[input.range];
+
+      const since = new Date(now - config.bucketCount * config.bucketMs);
+
+      const events = await ctx.prisma.metricsEvent.findMany({
+        where: { createdAt: { gte: since } },
+        select: { createdAt: true },
+      });
+
+      const floorToBucket = (d: Date) => {
+        const copy = new Date(d);
+        if (input.range === "hour") {
+          copy.setSeconds(0, 0);
+        } else if (input.range === "day") {
+          copy.setMinutes(0, 0, 0);
+        } else {
+          copy.setHours(0, 0, 0, 0);
+        }
+        return copy.getTime();
+      };
+
+      const formatLabel = (d: Date) => {
+        if (input.range === "hour") {
+          return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        }
+        if (input.range === "day") {
+          return `${String(d.getHours()).padStart(2, "0")}:00`;
+        }
+        return d.toLocaleDateString(undefined, { weekday: "short" });
+      };
+
+      const buckets: { name: string; value: number; timestamp: number }[] = [];
+      for (let i = config.bucketCount - 1; i >= 0; i--) {
+        const start = new Date(floorToBucket(new Date(now - i * config.bucketMs)));
+        buckets.push({ name: formatLabel(start), value: 0, timestamp: start.getTime() });
+      }
+
+      for (const e of events) {
+        const ts = floorToBucket(e.createdAt);
+        const bucket = buckets.find((b) => b.timestamp === ts);
+        if (bucket) bucket.value += 1;
+      }
+
+      return buckets.map(({ name, value }) => ({ name, value }));
+    }),
 
   /**
    * RECENT ACTIVITY
