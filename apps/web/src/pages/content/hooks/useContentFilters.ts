@@ -24,6 +24,8 @@ export function useContentFilters() {
   const pinnedTagId =
     pinnedTagIdParam && !Number.isNaN(Number(pinnedTagIdParam)) ? Number(pinnedTagIdParam) : null;
 
+  const mine = params.get("mine") === "1";
+
   function update(key: string, value: string) {
     const next = new URLSearchParams(params);
 
@@ -75,8 +77,10 @@ export function useContentFilters() {
     tagIds,
     tagMode,
     pinnedTagId,
+    mine,
 
     setSearch: (v: string) => update("search", v),
+    setMine: (v: boolean) => update("mine", v ? "1" : ""),
     setView: (v: "grid" | "list") => update("view", v),
     setStatus: (v: string) => update("status", v),
     setType: (v: string) => update("type", v),

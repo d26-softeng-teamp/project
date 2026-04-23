@@ -1,5 +1,5 @@
 import { FileText, Loader2, UserCircle } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   Cell,
   Pie,
@@ -34,6 +34,7 @@ function getStatusBadge(status: string | null) {
 }
 
 function UserDashboardPage() {
+  const navigate = useNavigate();
   const profile = trpc.user.myProfile.useQuery();
   const myContent = trpc.content.list.useQuery(
     { owner_id: profile.data?.id },
@@ -62,16 +63,21 @@ function UserDashboardPage() {
   ];
 
   const statusBreakdown = [
-    { name: "Created", value: drafts.length },
-    { name: "In Progress", value: inProgress.length },
-    { name: "Finalized", value: finalized.length },
+    { name: "Created", statusValue: "Created", value: drafts.length },
+    { name: "In Progress", statusValue: "in-progress", value: inProgress.length },
+    { name: "Finalized", statusValue: "Finalized", value: finalized.length },
     {
       name: "Archived",
+      statusValue: "Archived",
       value: content.filter((c) => c.document_status === "Archived").length,
     },
   ];
 
   const pieColors = ["#C9A84C", "#1B2A4A", "#497728", "#9CA3AF"];
+
+  function goToMyContentWithStatus(statusValue: string) {
+    navigate(`/hero/content?mine=1&status=${encodeURIComponent(statusValue)}`);
+  }
 
   const recent = [...content]
     .sort((a, b) => {
@@ -126,11 +132,16 @@ function UserDashboardPage() {
                           innerRadius={55}
                           outerRadius={90}
                           paddingAngle={3}
+                          onClick={(data) => {
+                            const statusValue = (data as { statusValue?: string })?.statusValue;
+                            if (statusValue) goToMyContentWithStatus(statusValue);
+                          }}
                         >
                           {statusBreakdown.map((entry, index) => (
                             <Cell
                               key={entry.name}
                               fill={pieColors[index % pieColors.length]}
+                              style={{ cursor: entry.value > 0 ? "pointer" : "default" }}
                             />
                           ))}
                         </Pie>
@@ -140,9 +151,11 @@ function UserDashboardPage() {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-xs">
                     {statusBreakdown.map((entry, index) => (
-                      <div
+                      <button
                         key={entry.name}
-                        className="flex items-center gap-2 text-muted-foreground"
+                        type="button"
+                        onClick={() => goToMyContentWithStatus(entry.statusValue)}
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
                       >
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
@@ -151,7 +164,7 @@ function UserDashboardPage() {
                         <span>
                           {entry.name}: {entry.value}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </>

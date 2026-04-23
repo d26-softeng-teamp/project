@@ -1,13 +1,13 @@
-import { Plus, Search } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
-import { useSession } from "@/auth/session-context";
-import { trpc } from "@/lib/trpc.ts";
-import { normalizeContent } from "@/utils/normalizeContent.ts";
-import { ContentFilters } from "./components/ContentFilters";
-import { ContentGrid } from "./components/ContentGrid";
-import { useContentFilters } from "./hooks/useContentFilters";
-import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import {Plus, Search} from "lucide-react";
+import {useState} from "react";
+import {Link} from "react-router";
+import {useSession} from "@/auth/session-context";
+import {trpc} from "@/lib/trpc.ts";
+import {normalizeContent} from "@/utils/normalizeContent.ts";
+import {ContentFilters} from "./components/ContentFilters";
+import {ContentGrid} from "./components/ContentGrid";
+import {useContentFilters} from "./hooks/useContentFilters";
+import {useDebouncedValue} from "./hooks/useDebouncedValue";
 
 const ROLE_TABS = [
   { key: "all", label: "All Users" },
@@ -61,18 +61,17 @@ export default function ContentPage() {
     tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
     tagMatchMode: filters.tagIds.length > 0 ? filters.tagMode : undefined,
     pinnedTagId: filters.pinnedTagId ?? undefined,
+    owner_id: filters.mine ? currentUserId : undefined,
   });
 
-  const allItems = contents.data?.map(normalizeContent) ?? [];
-
-  const filtered = allItems;
+  const filtered = contents.data?.map(normalizeContent) ?? [];
 
   return (
     <div className="border-t border-border/60 py-6 sm:py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex justify-end">
           <div className="flex w-full max-w-4xl items-center gap-3">
-            <div className="relative flex-[2]">
+            <div className="relative flex-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={filters.search}
