@@ -34,9 +34,9 @@ const TOOLTIP_STYLE = {
 function getStatusBadge(status: string | null) {
   switch (status) {
     case "Finalized":
-      return "bg-hanover-green text-white";
-    case "Created":
       return "bg-[#C9A84C] text-white";
+    case "Created":
+      return "bg-red text-white";
     case "in-progress":
       return "bg-blue-500 text-white";
     case "Archived":
@@ -81,7 +81,7 @@ function DashboardLoaded({
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  const pieColors = ["#497728", "#1B2A4A", "#C9A84C", "#9CA3AF"];
+  const pieColors = ["#C9A84C", "#497728", "#1B2A4A", "#9CA3AF"];
 
   return (
     <>

@@ -58,6 +58,10 @@ export function MetricsView() {
     refetchInterval: 5000,
   });
 
+  const slowestRoutes = trpc.metrics.getSlowestRoutes.useQuery(undefined, {
+    refetchInterval: 5000,
+  });
+
   const [trafficRange, setTrafficRange] = useState<TrafficRange>("hour");
   const requestsOverTime = trpc.metrics.getRequestsOverTime.useQuery(
     { range: trafficRange },
@@ -253,63 +257,109 @@ export function MetricsView() {
         </div>
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-xl font-semibold text-foreground">Recent Activity</h2>
-
-        <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
-          {auditRecent.data?.slice(0, 10).map((a) => (
-            <div
-              key={a.id}
-              className="flex flex-col gap-1 p-3 text-sm md:flex-row md:justify-between"
-            >
-              <div>
-                <span className="font-medium text-foreground">
-                  {a.user?.name ?? "Unknown User"}
-                </span>{" "}
-                <span className="text-muted-foreground">
-                  {a.user?.employee_code ? `(${a.user.employee_code})` : ""}
-                </span>{" "}
-                {formatAction(a.action)}{" "}
-                <span className="text-muted-foreground">{a.fileName ?? "a document"}</span>
-              </div>
-
-              <div className="text-xs text-muted-foreground md:text-right">
-                {new Date(a.createdAt).toLocaleString()}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-xl font-semibold text-foreground">System Performance</h2>
-
-        <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
-          <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <span>Route</span>
-            <span>Method</span>
-            <span className="text-right">Status</span>
-            <span className="text-right">Duration</span>
-          </div>
-          {recentMetrics.data?.slice(0, 10).map((r) => (
-            <div
-              key={r.id}
-              className="grid grid-cols-[1fr_80px_80px_100px] items-center gap-4 p-3 text-sm"
-            >
-              <span className="truncate font-mono text-foreground">{r.route}</span>
-              <span className="uppercase text-muted-foreground">{r.method}</span>
-              <span
-                className={`text-right font-medium ${
-                  r.status === "OK" ? "text-hanover-green" : "text-red-600"
-                }`}
+      <div className="mb-8 grid gap-4 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-3 text-xl font-semibold text-foreground">Recent Activity</h2>
+          <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+            {auditRecent.data?.slice(0, 10).map((a) => (
+              <div
+                key={a.id}
+                className="flex flex-col gap-1 p-3 text-sm md:flex-row md:justify-between"
               >
-                {r.status}
-              </span>
-              <span className="text-right text-muted-foreground">{r.durationMs}ms</span>
-            </div>
-          ))}
+                <div>
+                  <span className="font-medium text-foreground">
+                    {a.user?.name ?? "Unknown User"}
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    {a.user?.employee_code ? `(${a.user.employee_code})` : ""}
+                  </span>{" "}
+                  {formatAction(a.action)}{" "}
+                  <span className="text-muted-foreground">{a.fileName ?? "a document"}</span>
+                </div>
+                <div className="text-xs text-muted-foreground md:text-right">
+                  {new Date(a.createdAt).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-xl font-semibold text-foreground">**TODO** SOME OTHER DATA DISPLAY</h2>
         </div>
       </div>
+
+        <div className="mb-8 grid gap-4 lg:grid-cols-2">
+
+          <div>
+            <h2 className="mb-3 text-xl font-semibold text-foreground">System Performance</h2>
+
+            <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+
+              <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <span>Route</span>
+                <span>Method</span>
+                <span className="text-right">Status</span>
+                <span className="text-right">Duration</span>
+              </div>
+              {recentMetrics.data?.slice(0, 10).map((r) => (
+                <div
+                  key={r.id}
+                  className="grid grid-cols-[1fr_80px_80px_100px] items-center gap-4 p-3 text-sm"
+                >
+                  <span className="truncate font-mono text-foreground">{r.route}</span>
+                  <span className="uppercase text-muted-foreground">{r.method}</span>
+                  <span
+                    className={`text-right font-medium ${
+                      r.status === "OK" ? "text-hanover-green" : "text-red-600"
+                    }`}
+                  >
+                    {r.status}
+                  </span>
+                  <span className="text-right text-muted-foreground">{r.durationMs}ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-xl font-semibold text-foreground">Slowest Routes</h2>
+
+            <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+              <div className="grid grid-cols-[1fr_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <span>Route</span>
+                <span className="text-right">Avg Duration</span>
+              </div>
+              {slowestRoutes.data && slowestRoutes.data.length > 0 ? (
+                  [...slowestRoutes.data]
+                      .sort((a, b) => b.avgDuration - a.avgDuration)
+                      .slice(0, 10)
+                      .map((r) => {
+                        const isSlow = r.avgDuration >= 500;
+                        return (
+                            <div
+                                key={r.route}
+                                className="grid grid-cols-[1fr_100px] items-center gap-4 p-3 text-sm"
+                            >
+                              <span className="truncate font-mono text-foreground">{r.route}</span>
+                              <span
+                                  className={`text-right font-medium ${
+                                      isSlow ? "text-red-600" : "text-muted-foreground"
+                                  }`}
+                              >
+                          {r.avgDuration.toFixed(0)}ms
+                        </span>
+                            </div>
+                        );
+                      })
+              ) : (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No route data yet.
+                  </div>
+              )}
+            </div>
+          </div>
+        </div>
     </>
   );
 }
