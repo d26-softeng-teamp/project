@@ -25,3 +25,19 @@ export function capitalize(str: string): string {
   if (str.length === 0) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+/**
+ * Capitalize the first letter of every word in a string. (Only needed this once, but I figured it would be fun)
+ */
+export function capitalizeSplit(str: string): string {
+  if (str.length === 0) return str;
+
+  const result = str
+      .split(/[ -]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+  console.log(result);
+
+  return result;
+}

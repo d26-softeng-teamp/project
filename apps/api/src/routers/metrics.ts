@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { adminPortalProcedure, router } from "../lib/trpc";
+import { adminPortalProcedure, router } from "@/lib/trpc";
 
 const rangeSchema = z.enum(["hour", "day", "week"]);
 
@@ -121,6 +121,76 @@ export const metricsRouter = router({
       route,
       avgDuration: v.total / v.count,
     }));
+  }),
+
+  /**
+   * LATENCY PERCENTILES PER ROUTE (p50 / p95 / p99)
+   */
+  getRoutePercentiles: adminPortalProcedure.query(async ({ ctx }) => {
+    const data = await ctx.prisma.metricsEvent.findMany({
+      select: { route: true, durationMs: true },
+    });
+
+    const grouped = new Map<string, number[]>();
+    for (const d of data) {
+      if (!grouped.has(d.route)) grouped.set(d.route, []);
+      grouped.get(d.route)!.push(d.durationMs);
+    }
+
+    const percentile = (sorted: number[], p: number) => {
+      if (sorted.length === 0) return 0;
+      const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+      return sorted[Math.max(0, idx)];
+    };
+
+    return Array.from(grouped.entries()).map(([route, times]) => {
+      const sorted = [...times].sort((a, b) => a - b);
+      return {
+        route,
+        count: sorted.length,
+        p50: percentile(sorted, 50),
+        p95: percentile(sorted, 95),
+        p99: percentile(sorted, 99),
+      };
+    });
+  }),
+
+  /**
+   * CONTENT BY ROLE × STATUS — counts documents per (job_position, document_status).
+   */
+  getContentByRoleStatus: adminPortalProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.prisma.contentManagement.findMany({
+      select: { job_position: true, document_status: true },
+    });
+
+    const matrix = new Map<string, Map<string, number>>();
+    for (const r of rows) {
+      const role = r.job_position?.trim() || "Unassigned";
+      const status = r.document_status ?? "Unknown";
+      if (!matrix.has(role)) matrix.set(role, new Map());
+      const inner = matrix.get(role)!;
+      inner.set(status, (inner.get(status) ?? 0) + 1);
+    }
+
+    return Array.from(matrix.entries()).map(([role, statuses]) => ({
+      role,
+      total: Array.from(statuses.values()).reduce((a, b) => a + b, 0),
+      counts: Object.fromEntries(statuses) as Record<string, number>,
+    }));
+  }),
+
+  /**
+   * RECENT ERRORS (last N non-OK requests)
+   */
+  getRecentErrors: adminPortalProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.metricsEvent.findMany({
+      where: { status: { not: "OK" } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: {
+        user: { select: { name: true, employee_code: true } },
+      },
+    });
   }),
 
   getActiveUsers: adminPortalProcedure.query(async ({ ctx }) => {

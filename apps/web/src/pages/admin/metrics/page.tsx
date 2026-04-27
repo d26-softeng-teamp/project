@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc";
 
+import { capitalizeSplit } from "../../../../../../packages/utils/src/format.ts"
+
 type TrafficRange = "hour" | "day" | "week";
 
 const TRAFFIC_RANGES: { key: TrafficRange; label: string; tickInterval: number }[] = [
@@ -58,7 +60,11 @@ export function MetricsView() {
     refetchInterval: 5000,
   });
 
-  const slowestRoutes = trpc.metrics.getSlowestRoutes.useQuery(undefined, {
+  const routePercentiles = trpc.metrics.getRoutePercentiles.useQuery(undefined, {
+    refetchInterval: 5000,
+  });
+
+  const contentByRoleStatus = trpc.metrics.getContentByRoleStatus.useQuery(undefined, {
     refetchInterval: 5000,
   });
 
@@ -115,7 +121,7 @@ export function MetricsView() {
         </div>
 
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Errors</p>
+          <p className="text-sm text-muted-foreground">Total Errors</p>
           <p className="text-xl font-bold text-red-600">{metrics.data.errors ?? 0}</p>
         </div>
 
@@ -257,10 +263,10 @@ export function MetricsView() {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 lg:grid-cols-2">
-        <div>
+      <div className="mb-8 grid items-stretch gap-4 lg:grid-cols-2">
+        <div className="flex h-full flex-col">
           <h2 className="mb-3 text-xl font-semibold text-foreground">Recent Activity</h2>
-          <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+          <div className="flex-1 divide-y divide-border overflow-y-auto rounded border border-border bg-card shadow-sm">
             {auditRecent.data?.slice(0, 10).map((a) => (
               <div
                 key={a.id}
@@ -284,8 +290,83 @@ export function MetricsView() {
           </div>
         </div>
 
-        <div>
-          <h2 className="mb-3 text-xl font-semibold text-foreground">**TODO** SOME OTHER DATA DISPLAY</h2>
+        <div className="flex h-full flex-col">
+          <h2 className="mb-3 text-xl font-semibold leading-7 text-foreground">
+            Content by Role × Status
+            <span className="ml-3 text-xs font-normal text-muted-foreground">
+              Where each team's documents sit in the lifecycle.
+            </span>
+          </h2>
+          <div className="flex-1 overflow-auto rounded border border-border bg-card shadow-sm">
+            {contentByRoleStatus.data && contentByRoleStatus.data.length > 0 ? (
+              (() => {
+                const STATUS_COLS: { key: string; label: string }[] = [
+                  { key: "Created", label: "Created" },
+                  { key: "in-progress", label: "In Progress" },
+                  { key: "Finalized", label: "Finalized" },
+                  { key: "Archived", label: "Archived" },
+                ];
+                const rows = [...contentByRoleStatus.data].sort((a, b) => b.total - a.total);
+                const max = Math.max(
+                  1,
+                  ...rows.flatMap((r) => STATUS_COLS.map((c) => r.counts[c.key] ?? 0)),
+                );
+
+                return (
+                  <table className="h-full w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Role
+                        </th>
+                        {STATUS_COLS.map((c) => (
+                          <th
+                            key={c.key}
+                            className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                          >
+                            {c.label}
+                          </th>
+                        ))}
+                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.role} className="border-b border-border last:border-0">
+                          <td className="px-3 py-2 font-medium text-foreground">{capitalizeSplit(row.role)}</td>
+                          {STATUS_COLS.map((c) => {
+                            const v = row.counts[c.key] ?? 0;
+                            const intensity = v === 0 ? 0 : 0.1 + (v / max) * 0.5;
+                            return (
+                              <td
+                                key={c.key}
+                                className="px-3 py-2 text-right text-foreground"
+                                style={{
+                                  backgroundColor:
+                                    v > 0 ? `rgba(73, 119, 40, ${intensity})` : undefined,
+                                }}
+                              >
+                                {v}
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-2 text-right font-semibold text-foreground">
+                            {row.total}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()
+            ) : (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No content yet.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -323,32 +404,42 @@ export function MetricsView() {
           </div>
 
           <div>
-            <h2 className="mb-3 text-xl font-semibold text-foreground">Slowest Routes</h2>
-
+            <div className="mb-3 flex items-baseline gap-3">
+              <h2 className="text-xl font-semibold text-foreground">Latency Percentiles</h2>
+              <p className="text-xs text-muted-foreground">
+                p95 ≥ 500ms highlighted. Sorted by p95 desc.
+              </p>
+            </div>
             <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
-              <div className="grid grid-cols-[1fr_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="grid grid-cols-[1fr_60px_70px_70px_70px] gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <span>Route</span>
-                <span className="text-right">Avg Duration</span>
+                <span className="text-right">N</span>
+                <span className="text-right">p50</span>
+                <span className="text-right">p95</span>
+                <span className="text-right">p99</span>
               </div>
-              {slowestRoutes.data && slowestRoutes.data.length > 0 ? (
-                  [...slowestRoutes.data]
-                      .sort((a, b) => b.avgDuration - a.avgDuration)
+              {routePercentiles.data && routePercentiles.data.length > 0 ? (
+                  [...routePercentiles.data]
+                      .sort((a, b) => b.p95 - a.p95)
                       .slice(0, 10)
                       .map((r) => {
-                        const isSlow = r.avgDuration >= 500;
+                        const isSlow = r.p95 >= 500;
                         return (
                             <div
                                 key={r.route}
-                                className="grid grid-cols-[1fr_100px] items-center gap-4 p-3 text-sm"
+                                className="grid grid-cols-[1fr_60px_70px_70px_70px] items-center gap-3 p-3 text-sm"
                             >
                               <span className="truncate font-mono text-foreground">{r.route}</span>
+                              <span className="text-right text-muted-foreground">{r.count}</span>
+                              <span className="text-right text-muted-foreground">{r.p50}ms</span>
                               <span
                                   className={`text-right font-medium ${
-                                      isSlow ? "text-red-600" : "text-muted-foreground"
+                                      isSlow ? "text-red-600" : "text-foreground"
                                   }`}
                               >
-                          {r.avgDuration.toFixed(0)}ms
+                          {r.p95}ms
                         </span>
+                              <span className="text-right text-muted-foreground">{r.p99}ms</span>
                             </div>
                         );
                       })
