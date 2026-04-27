@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { adminPortalProcedure, router } from "@/lib/trpc";
+import { adminPortalProcedure, router } from "../lib/trpc";
 
 const rangeSchema = z.enum(["hour", "day", "week"]);
 
