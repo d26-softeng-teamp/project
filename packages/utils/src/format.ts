@@ -32,10 +32,8 @@ export function capitalize(str: string): string {
 export function capitalizeSplit(str: string): string {
   if (str.length === 0) return str;
 
-  const result = str
+  return str
       .split(/[ -]/)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
-
-  return result;
 }
