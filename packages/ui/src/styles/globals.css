@@ -94,3 +94,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+.recharts-pie * {
+  outline: none !important;
+}
+
+.recharts-bar * {
+  outline: none !important;
+}
+
+.recharts-wrapper:focus,
+.recharts-wrapper svg:focus,
+.recharts-surface:focus {
+  outline: none;
+}
+
+
+
