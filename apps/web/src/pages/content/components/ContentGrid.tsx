@@ -3,10 +3,6 @@ import type { ContentItem } from "@/types/content";
 import { ContentCard } from "./ContentCard";
 import { ContentListItem } from "./ContentListItem";
 
-type ToggleFavorite = {
-  mutate: (args: { fileID: string; is_favorited: boolean }) => void;
-};
-
 type CheckinMutation = {
   mutate: (args: { fileID: string }) => void;
 };
@@ -24,7 +20,9 @@ type Props = {
   filtered: ContentItem[];
   filters: Filters;
   currentUserId?: string;
-  toggleFavorite: ToggleFavorite;
+  toggleFavorite: {
+    mutate: (args: { fileID: string }) => void;
+  };
   checkin: CheckinMutation;
   getStatusBadge: StatusFn;
 };

@@ -17,6 +17,8 @@ export function useContentFilters() {
         .filter((n) => !Number.isNaN(n))
     : [];
 
+  const format = params.get("format") ?? "";
+
   const tagModeParam = params.get("tagMode");
   const tagMode: "any" | "all" = tagModeParam === "all" ? "all" : "any";
 
@@ -73,6 +75,7 @@ export function useContentFilters() {
     view,
     status,
     type,
+    format,
     role: role || "all",
     tagIds,
     tagMode,
@@ -84,6 +87,7 @@ export function useContentFilters() {
     setView: (v: "grid" | "list") => update("view", v),
     setStatus: (v: string) => update("status", v),
     setType: (v: string) => update("type", v),
+    setFormat: (v: string) => update("format", v),
     setRole: (v: string) => update("role", v),
     setTagIds,
     setTagMode,

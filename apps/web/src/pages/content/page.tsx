@@ -1,13 +1,14 @@
-import {Plus, Search} from "lucide-react";
-import {useState} from "react";
-import {Link} from "react-router";
-import {useSession} from "@/auth/session-context";
-import {trpc} from "@/lib/trpc.ts";
-import {normalizeContent} from "@/utils/normalizeContent.ts";
-import {ContentFilters} from "./components/ContentFilters";
-import {ContentGrid} from "./components/ContentGrid";
-import {useContentFilters} from "./hooks/useContentFilters";
-import {useDebouncedValue} from "./hooks/useDebouncedValue";
+import { Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import { useSession } from "@/auth/session-context";
+import { trpc } from "@/lib/trpc.ts";
+import { useFavorites } from "@/store/favorites";
+import { normalizeContent } from "@/utils/normalizeContent.ts";
+import { ContentFilters } from "./components/ContentFilters";
+import { ContentGrid } from "./components/ContentGrid";
+import { useContentFilters } from "./hooks/useContentFilters";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
 
 const ROLE_TABS = [
   { key: "all", label: "All Users" },
@@ -41,12 +42,23 @@ export default function ContentPage() {
   const [openRole, setOpenRole] = useState(true);
   const [openStatus, setOpenStatus] = useState(true);
   const [openType, setOpenType] = useState(true);
+  const [openFormat, setOpenFormat] = useState(true);
   const [openTags, setOpenTags] = useState(true);
 
   const utils = trpc.useUtils();
 
-  const toggleFavorite = trpc.content.update.useMutation({
-    onSuccess: () => utils.content.list.invalidate(),
+  const { toggle } = useFavorites();
+
+  const toggleFavorite = trpc.content.toggleFavorite.useMutation({
+    onMutate: async ({ fileID }) => {
+      toggle(fileID); // instant UI update
+    },
+    onError: (_err, { fileID }) => {
+      toggle(fileID); // rollback
+    },
+    onSuccess: () => {
+      utils.content.list.invalidate();
+    },
   });
 
   const checkin = trpc.content.checkin.useMutation({
@@ -57,6 +69,7 @@ export default function ContentPage() {
     search: debouncedSearch,
     document_status: filters.status || undefined,
     content_type: (filters.type as "Reference" | "Workflow") || undefined,
+    format: filters.format || undefined,
     role: filters.role === "all" ? undefined : filters.role,
     tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
     tagMatchMode: filters.tagIds.length > 0 ? filters.tagMode : undefined,
@@ -64,7 +77,26 @@ export default function ContentPage() {
     owner_id: filters.mine ? currentUserId : undefined,
   });
 
-  const filtered = contents.data?.map(normalizeContent) ?? [];
+  const { setAll, isFavorited } = useFavorites();
+
+  useEffect(() => {
+    if (!contents.data) return;
+
+    const favIds = contents.data.filter((c) => c.is_favorited).map((c) => c.fileID);
+
+    setAll(favIds);
+  }, [contents.data, setAll]);
+
+  const allItems = contents.data?.map(normalizeContent) ?? [];
+
+  const filtered = [...allItems].sort((a, b) => {
+    const aFav = isFavorited(a.fileID) ? 1 : 0;
+    const bFav = isFavorited(b.fileID) ? 1 : 0;
+
+    if (bFav !== aFav) return bFav - aFav;
+
+    return new Date(b.last_modified ?? 0).getTime() - new Date(a.last_modified ?? 0).getTime();
+  });
 
   return (
     <div className="border-t border-border/60 py-6 sm:py-8">
@@ -117,6 +149,8 @@ export default function ContentPage() {
             setOpenStatus={setOpenStatus}
             openType={openType}
             setOpenType={setOpenType}
+            openFormat={openFormat}
+            setOpenFormat={setOpenFormat}
             openTags={openTags}
             setOpenTags={setOpenTags}
             ROLE_TABS={ROLE_TABS}

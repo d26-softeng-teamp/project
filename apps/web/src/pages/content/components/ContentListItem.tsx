@@ -1,11 +1,8 @@
 import { Lock, Unlock } from "lucide-react";
 import { Link } from "react-router";
+import { useFavorites } from "@/store/favorites";
 import type { ContentItem } from "@/types/content";
 import { renderTag } from "@/utils/tag";
-
-type ToggleFavorite = {
-  mutate: (args: { fileID: string; is_favorited: boolean }) => void;
-};
 
 type CheckinMutation = {
   mutate: (args: { fileID: string }) => void;
@@ -14,7 +11,9 @@ type CheckinMutation = {
 type Props = {
   item: ContentItem;
   currentUserId?: string;
-  toggleFavorite: ToggleFavorite;
+  toggleFavorite: {
+    mutate: (args: { fileID: string }) => void;
+  };
   checkin: CheckinMutation;
   getStatusBadge: (status?: string) => string;
 };
@@ -36,7 +35,7 @@ export function ContentListItem({
   const tags = item.content_tags ?? [];
   const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
   const hiddenCount = tags.length - MAX_VISIBLE_TAGS;
-
+  const { isFavorited } = useFavorites();
   const isCheckedOutByMe = !!(item.is_checked_out && item.checked_out_by === currentUserId);
   const checkedOutByName = item.checked_out_by_user?.name;
 
@@ -153,14 +152,15 @@ export function ContentListItem({
           type="button"
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
+
             toggleFavorite.mutate({
               fileID: item.fileID,
-              is_favorited: !item.is_favorited,
             });
           }}
           className="text-yellow-400"
         >
-          {item.is_favorited ? "★" : "☆"}
+          {isFavorited(item.fileID) ? "★" : "☆"}
         </button>
       </div>
     </Link>

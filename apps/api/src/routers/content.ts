@@ -2,6 +2,8 @@ import {
   contentIdSchema,
   contentListQuerySchema,
   createContentSchema,
+  FORMAT_GROUPS,
+  NAMED_EXTENSIONS,
   updateContentSchema,
 } from "@myapp/types/schemas";
 import type { Prisma } from "@prisma/client";
@@ -39,6 +41,13 @@ function assertCanEdit(
   }
 }
 
+function extractFormat(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  if (!ext) return null;
+  return NAMED_EXTENSIONS.includes(ext as never) ? ext : "other";
+}
+
 function normalizeRole(role?: string | null) {
   return (role ?? "").toLowerCase().replace(/\s+/g, "-").trim();
 }
@@ -54,6 +63,40 @@ function canEditForRole(
 }
 
 export const contentRouter = router({
+  toggleFavorite: publicProcedure.input(contentIdSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.user?.id;
+    if (!userId) throw new Error("Not authenticated");
+
+    const existing = await ctx.prisma.favorite.findUnique({
+      where: {
+        userId_fileID: {
+          userId,
+          fileID: input.fileID,
+        },
+      },
+    });
+
+    if (existing) {
+      await ctx.prisma.favorite.deleteMany({
+        where: {
+          userId,
+          fileID: input.fileID,
+        },
+      });
+
+      return { favorited: false };
+    }
+
+    await ctx.prisma.favorite.create({
+      data: {
+        userId,
+        fileID: input.fileID,
+      },
+    });
+    console.log("FAVORITE TOGGLE:", ctx.user?.id, input.fileID);
+    return { favorited: true };
+  }),
+
   checkout: publicProcedure.input(contentIdSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) throw new Error("Not authenticated");
@@ -140,6 +183,7 @@ export const contentRouter = router({
 
   list: publicProcedure.input(contentListQuerySchema).query(async ({ ctx, input }) => {
     const where: Record<string, unknown> = {};
+    const userId = ctx.user?.id;
 
     if (input.document_status) {
       where.document_status = input.document_status;
@@ -173,6 +217,11 @@ export const contentRouter = router({
       ];
     }
 
+    if (input.format && input.format in FORMAT_GROUPS) {
+      const exts = FORMAT_GROUPS[input.format as keyof typeof FORMAT_GROUPS];
+      where.format = { in: [...exts] };
+    }
+
     if (input.tagIds && input.tagIds.length > 0) {
       const mode = input.tagMatchMode ?? "any";
       if (mode === "all") {
@@ -186,22 +235,70 @@ export const contentRouter = router({
 
     const results = await ctx.prisma.contentManagement.findMany({
       where,
-      orderBy: [{ is_favorited: "desc" }, { last_modified: "desc" }],
+      orderBy: [
+        {
+          favoritedBy: {
+            _count: "desc",
+          },
+        },
+        {
+          last_modified: "desc",
+        },
+      ],
       include: {
         owner: { select: ownerSelect },
         checked_out_by_user: { select: checkedOutByUserSelect },
         ...tagsInclude,
+        favoritedBy: userId
+          ? {
+              where: { userId },
+              select: { fileID: true },
+            }
+          : false,
       },
     });
 
-    if (input.pinnedTagId !== undefined) {
-      const pinnedId = input.pinnedTagId;
-      const pinned = results.filter((r) => r.content_tags.some((ct) => ct.tagId === pinnedId));
-      const unpinned = results.filter((r) => !r.content_tags.some((ct) => ct.tagId === pinnedId));
-      return [...pinned, ...unpinned];
-    }
+    const base =
+      input.pinnedTagId !== undefined
+        ? (() => {
+            const pinnedId = input.pinnedTagId;
 
-    return results;
+            const pinned = results.filter((r) =>
+              r.content_tags.some((ct) => ct.tagId === pinnedId),
+            );
+
+            const unpinned = results.filter(
+              (r) => !r.content_tags.some((ct) => ct.tagId === pinnedId),
+            );
+
+            return [...pinned, ...unpinned];
+          })()
+        : results;
+
+    return base
+      .map((r) => ({
+        ...r,
+        is_favorited: (r.favoritedBy?.length ?? 0) > 0,
+      }))
+      .sort((a, b) => {
+        // 1. favorites first
+        const favDiff = Number(b.is_favorited) - Number(a.is_favorited);
+        if (favDiff !== 0) return favDiff;
+
+        // 2. pinned tags (optional enhancement)
+        const pinnedId = input.pinnedTagId;
+
+        if (pinnedId !== undefined) {
+          const aPinned = a.content_tags.some((t) => t.tagId === pinnedId);
+          const bPinned = b.content_tags.some((t) => t.tagId === pinnedId);
+
+          const pinnedDiff = Number(bPinned) - Number(aPinned);
+          if (pinnedDiff !== 0) return pinnedDiff;
+        }
+
+        // 3. fallback: last modified
+        return new Date(b.last_modified ?? 0).getTime() - new Date(a.last_modified ?? 0).getTime();
+      });
   }),
 
   getById: publicProcedure.input(contentIdSchema).query(async ({ ctx, input }) => {
@@ -228,9 +325,12 @@ export const contentRouter = router({
 
     const { tagIds, owner_id, ...rest } = input;
 
+    const format = extractFormat(input.filename);
+
     const data: Prisma.ContentManagementUncheckedCreateInput = {
       ...rest,
       owner_id: owner_id ?? null,
+      format,
     };
 
     const result = await ctx.prisma.contentManagement.create({
@@ -267,6 +367,10 @@ export const contentRouter = router({
 
       const userId = ctx.user?.id;
       if (!userId) throw new Error("Not authenticated");
+
+      if (data.filename !== undefined) {
+        (data as typeof data & { format?: string | null }).format = extractFormat(data.filename);
+      }
 
       const profile = ctx.profile as { role: string | null } | null;
       const userRole = profile?.role;

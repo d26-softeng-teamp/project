@@ -7,16 +7,32 @@ type RoleTab = {
   label: string;
 };
 
+const FORMAT_OPTIONS = [
+  { key: "pdf", label: "PDF" },
+  { key: "word", label: "Word" },
+  { key: "excel", label: "Excel" },
+  { key: "powerpoint", label: "PowerPoint" },
+  { key: "text", label: "Text" },
+  { key: "csv", label: "CSV" },
+  { key: "png", label: "PNG" },
+  { key: "jpeg", label: "JPEG" },
+  { key: "gif", label: "GIF" },
+  { key: "svg", label: "SVG" },
+  { key: "other", label: "Other" },
+] as const;
+
 type Filters = {
   role: string;
   status: string;
   type: string;
+  format: string;
   tagIds: number[];
   tagMode: "any" | "all";
   pinnedTagId: number | null;
   setRole: (v: string) => void;
   setStatus: (v: string) => void;
   setType: (v: string) => void;
+  setFormat: (v: string) => void;
   setTagIds: (ids: number[]) => void;
   setTagMode: (mode: "any" | "all") => void;
   setPinnedTagId: (id: number | null) => void;
@@ -30,6 +46,8 @@ type Props = {
   setOpenStatus: (v: boolean) => void;
   openType: boolean;
   setOpenType: (v: boolean) => void;
+  openFormat: boolean;
+  setOpenFormat: (v: boolean) => void;
   openTags: boolean;
   setOpenTags: (v: boolean) => void;
   ROLE_TABS: RoleTab[];
@@ -43,6 +61,8 @@ export function ContentFilters({
   setOpenStatus,
   openType,
   setOpenType,
+  openFormat,
+  setOpenFormat,
   openTags,
   setOpenTags,
   ROLE_TABS,
@@ -190,6 +210,51 @@ export function ContentFilters({
                     )}
                     <span className={`ml-2 ${active ? "font-semibold" : "text-muted-foreground"}`}>
                       {t === "" ? "All" : t}
+                    </span>
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <hr />
+      {/* FORMAT */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setOpenFormat(!openFormat)}
+          className="mb-2 flex w-full justify-between text-sm font-semibold"
+        >
+          Format
+          <span className="text-muted-foreground">{openFormat ? "−" : "+"}</span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {openFormat && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="flex flex-col overflow-hidden"
+            >
+              {[{ key: "", label: "All" }, ...FORMAT_OPTIONS].map(({ key, label }) => {
+                const active = filters.format === key;
+
+                return (
+                  <button
+                    type="button"
+                    key={key || "all"}
+                    onClick={() => filters.setFormat(key)}
+                    className="relative flex items-center rounded px-2 py-1 text-sm hover:bg-muted"
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded bg-hanover-green" />
+                    )}
+                    <span className={`ml-2 ${active ? "font-semibold" : "text-muted-foreground"}`}>
+                      {label}
                     </span>
                   </button>
                 );

@@ -1,5 +1,6 @@
 import { Lock, Unlock } from "lucide-react";
 import { Link } from "react-router";
+import { useFavorites } from "@/store/favorites";
 import type { ContentItem } from "@/types/content";
 import { renderTag } from "@/utils/tag";
 
@@ -11,7 +12,7 @@ type Props = {
   item: ContentItem;
   currentUserId?: string;
   toggleFavorite: {
-    mutate: (args: { fileID: string; is_favorited: boolean }) => void;
+    mutate: (args: { fileID: string }) => void;
   };
   checkin: CheckinMutation;
   getStatusBadge: (status?: string) => string;
@@ -34,7 +35,7 @@ export function ContentCard({
   const tags = item.content_tags ?? [];
   const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
   const hiddenCount = tags.length - MAX_VISIBLE_TAGS;
-
+  const { isFavorited } = useFavorites();
   const isCheckedOutByMe = !!(item.is_checked_out && item.checked_out_by === currentUserId);
   const checkedOutByName = item.checked_out_by_user?.name;
 
@@ -62,14 +63,15 @@ export function ContentCard({
             type="button"
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
+
               toggleFavorite.mutate({
                 fileID: item.fileID,
-                is_favorited: !item.is_favorited,
               });
             }}
             className="text-yellow-400"
           >
-            {item.is_favorited ? "★" : "☆"}
+            {isFavorited(item.fileID) ? "★" : "☆"}
           </button>
         </div>
       </div>

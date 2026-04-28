@@ -547,22 +547,23 @@ model webauthn_credentials {
 }
 
 model ContentManagement {
-  fileID          String       @id @map("fileid") @db.Char(64)
-  filename        String?      @db.VarChar(100)
-  url             String?      @db.VarChar(500)
-  job_position    String?      @db.VarChar(20)
-  last_modified   DateTime?    @db.Date
-  expiration_date DateTime?    @db.Date
-  content_type    String?      @db.VarChar(20)
-  document_status String?      @db.VarChar(20)
-  is_favorited    Boolean      @default(false)
-  is_checked_out       Boolean      @default(false)
-  checked_out_by       String?      @db.Uuid
-  checked_out_at       DateTime?    @db.Timestamptz(6)
-  owner_id             String?      @map("owner_id") @db.Uuid
-  owner                UserProfile? @relation("OwnedContent", fields: [owner_id], references: [id], onUpdate: NoAction)
-  checked_out_by_user  UserProfile? @relation("CheckedOutContent", fields: [checked_out_by], references: [id], onUpdate: NoAction)
-  content_tags         ContentTag[]
+  fileID              String       @id @map("fileid") @db.Char(64)
+  filename            String?      @db.VarChar(100)
+  url                 String?      @db.VarChar(500)
+  job_position        String?      @db.VarChar(20)
+  last_modified       DateTime?    @db.Date
+  expiration_date     DateTime?    @db.Date
+  content_type        String?      @db.VarChar(20)
+  document_status     String?      @db.VarChar(20)
+  format              String?      @db.VarChar(20)
+  is_checked_out      Boolean      @default(false)
+  checked_out_by      String?      @db.Uuid
+  checked_out_at      DateTime?    @db.Timestamptz(6)
+  owner_id            String?      @map("owner_id") @db.Uuid
+  owner               UserProfile? @relation("OwnedContent", fields: [owner_id], references: [id], onUpdate: NoAction)
+  checked_out_by_user UserProfile? @relation("CheckedOutContent", fields: [checked_out_by], references: [id], onUpdate: NoAction)
+  content_tags        ContentTag[]
+  favoritedBy         Favorite[]
 
   @@map("content_management")
   @@schema("public")
@@ -589,26 +590,41 @@ model ContentTag {
   @@schema("public")
 }
 
+model Favorite {
+  userId String @db.Uuid
+  fileID String @db.Char(64)
+
+  user    UserProfile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content ContentManagement @relation(fields: [fileID], references: [fileID], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, fileID]) // composite PK = prevents duplicates
+  @@map("favorites")
+  @@schema("public")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model UserProfile {
-  id            String              @id @db.Uuid
-  email         String
-  name          String
-  created_at    DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
-  portal        String              @default("employee")
-  role          String              @default("underwriter")
-  employee_code String?             @unique @db.VarChar(10)
-  job_desc      String?             @db.VarChar(200)
-  photo_url     String?             @db.VarChar(500)
-  owned_content      ContentManagement[] @relation("OwnedContent")
-  checkedOutContent  ContentManagement[] @relation("CheckedOutContent")
-  auth_user          auth_users          @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                String              @id @db.Uuid
+  email             String
+  name              String
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  portal            String              @default("employee")
+  role              String              @default("underwriter")
+  employee_code     String?             @unique @db.VarChar(10)
+  job_desc          String?             @db.VarChar(200)
+  photo_url         String?             @db.VarChar(500)
+  owned_content     ContentManagement[] @relation("OwnedContent")
+  checkedOutContent ContentManagement[] @relation("CheckedOutContent")
+  auth_user         auth_users          @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   metricsEvents MetricsEvent[]
   auditEvents   AuditEvent[]
   userSessions  UserSession[]
+  favorites     Favorite[]
 
   @@map("users")
   @@schema("public")

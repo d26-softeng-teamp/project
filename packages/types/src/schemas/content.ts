@@ -20,6 +20,40 @@ export const createContentSchema = z.object({
 
 export const updateContentSchema = createContentSchema.omit({ fileID: true }).partial();
 
+export const FORMAT_GROUPS = {
+  pdf: ["pdf"],
+  word: ["doc", "docx"],
+  excel: ["xls", "xlsx"],
+  powerpoint: ["ppt", "pptx"],
+  text: ["txt"],
+  csv: ["csv"],
+  png: ["png"],
+  jpeg: ["jpg", "jpeg"],
+  gif: ["gif"],
+  svg: ["svg"],
+  other: ["other"],
+} as const;
+
+export const NAMED_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "txt",
+  "csv",
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "svg",
+] as const;
+export const ALLOWED_EXTENSIONS = Object.values(FORMAT_GROUPS).flat();
+
+export type FormatGroup = keyof typeof FORMAT_GROUPS;
+
 export const contentListQuerySchema = z.object({
   document_status: z.string().optional(),
   content_type: z.enum(["Reference", "Workflow"]).optional(),
@@ -29,6 +63,7 @@ export const contentListQuerySchema = z.object({
   tagIds: z.array(z.number().int()).optional(),
   tagMatchMode: z.enum(["any", "all"]).optional(),
   pinnedTagId: z.number().int().optional(),
+  format: z.string().optional(),
 });
 
 export const tagIdSchema = z.object({
