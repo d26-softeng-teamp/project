@@ -10,6 +10,7 @@ import { useFileUpload } from "@/hooks/use-file-upload";
 import { type RouterOutputs, trpc } from "@/lib/trpc.ts";
 import { renderTag } from "@/utils/tag";
 import { TagInput } from "./tag-input";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 function formatDateField(date: Date | string | null | undefined): string {
   if (!date) return "";
@@ -558,8 +559,12 @@ function ContentFormMetadataSection({
       </div>
 
       <div>
-        <label htmlFor="job-position" className="mb-2 block text-sm font-semibold text-foreground">
+        <label
+          htmlFor="job-position"
+          className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground"
+        >
           Job Position
+          <HelpTooltip text="Controls which user role can see this content. Select the position this document is intended for." />
         </label>
         <select
           id="job-position"
@@ -581,19 +586,42 @@ function ContentFormMetadataSection({
         value={lastModified}
         onChange={(e) => setLastModified(e.target.value)}
       />
-      <TextInput
-        label="Expiration Date"
-        type="date"
-        value={expirationDate}
-        onChange={(e) => setExpirationDate(e.target.value)}
-      />
-      <TextInput
-        label="Next Review Date"
-        type="date"
-        value={nextReviewDate}
-        onChange={(e) => setNextReviewDate(e.target.value)}
-        min={todayDateInputValue()}
-      />
+
+      <div>
+        <label
+          htmlFor="expiration-date"
+          className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground"
+        >
+          Expiration Date
+          <HelpTooltip text="The date this document becomes invalid and should no longer be used." />
+        </label>
+        <input
+          id="expiration-date"
+          type="date"
+          value={expirationDate}
+          onChange={(e) => setExpirationDate(e.target.value)}
+          className="w-full rounded border border-border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-hanover-green"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="next-review-date"
+          className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground"
+        >
+          Next Review Date
+          <HelpTooltip text="Schedule when this document should be reviewed for accuracy. Items past this date will be highlighted as overdue." />
+        </label>
+        <input
+          id="next-review-date"
+          type="date"
+          value={nextReviewDate}
+          onChange={(e) => setNextReviewDate(e.target.value)}
+          min={todayDateInputValue()}
+          className="w-full rounded border border-border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-hanover-green"
+        />
+      </div>
+
       <div>
         <label htmlFor="content-type" className="mb-2 block text-sm font-semibold text-foreground">
           Content Type
@@ -611,8 +639,12 @@ function ContentFormMetadataSection({
       </div>
 
       <div>
-        <label htmlFor="status" className="mb-2 block text-sm font-semibold text-foreground">
+        <label
+          htmlFor="status"
+          className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground"
+        >
           Status
+          <HelpTooltip text="Created: new document. In Progress: being worked on. Finalized: approved and ready to use. Archived: no longer active." />
         </label>
         <select
           id="status"
@@ -1185,6 +1217,10 @@ function ContentFormPage() {
           {hasRoleAccess && !isLockedByOther && (
             <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <HelpTooltip
+                  text="Check out a document to lock it for editing. Others cannot edit it while you have it checked out. Check it back in when done."
+                  position="right"
+                />
                 {isCheckedOutByMe ? (
                   <>
                     <Lock className="h-4 w-4 text-hanover-green" />

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { trpc } from "@/lib/trpc";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 const ROLES: AccountRole[] = [
   "admin",
@@ -275,8 +276,12 @@ function UserFormPage() {
             />
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="role" className="text-sm font-medium text-foreground">
+              <label
+                htmlFor="role"
+                className="flex items-center gap-1.5 text-sm font-medium text-foreground"
+              >
                 Job role
+                <HelpTooltip text="Admin: full access to all features. All other roles get employee portal access and see only content assigned to their position." />
               </label>
               <select
                 id="role"
@@ -292,13 +297,23 @@ function UserFormPage() {
               </select>
             </div>
 
-            <TextInput
-              label="Employee code (optional)"
-              type="text"
-              maxLength={10}
-              value={employeeCode}
-              onChange={(e) => setEmployeeCode(e.target.value)}
-            />
+            <div>
+              <label
+                htmlFor="employee-code"
+                className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground"
+              >
+                Employee code (optional)
+                <HelpTooltip text="A short identifier for this employee, e.g. their staff ID. Shown next to their name in content owner dropdowns." />
+              </label>
+              <input
+                id="employee-code"
+                type="text"
+                maxLength={10}
+                value={employeeCode}
+                onChange={(e) => setEmployeeCode(e.target.value)}
+                className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hanover-green"
+              />
+            </div>
 
             <TextInput
               label="Job description (optional)"
