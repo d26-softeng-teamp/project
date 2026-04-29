@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import type { RouterOutputs } from "@/lib/trpc.ts";
 import { trpc } from "@/lib/trpc.ts";
 import { MetricsView } from "@/pages/admin/metrics/page.tsx";
@@ -86,20 +87,33 @@ function DashboardLoaded({
   return (
     <>
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded border-t-4 border-t-hanover-green bg-card p-6 shadow-sm"
-          >
-            <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
-          </div>
-        ))}
+        {stats.map((stat) => {
+          const helpText: Record<string, string> = {
+            "Total Employees": "The total number of employees registered in the system.",
+            "Total Content": "The total number of content items across all statuses and roles.",
+            Finalized: "Content items that have been reviewed and marked as finalized.",
+            "In Progress": "Content items currently being worked on.",
+          };
+          return (
+            <div
+              key={stat.label}
+              className="rounded border-t-4 border-t-hanover-green bg-card p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <div className="text-3xl font-bold text-foreground">{stat.value}</div>
+                <HelpTooltip text={helpText[stat.label] ?? ""} position="left" />
+              </div>
+              <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
+            </div>
+          );
+        })}
       </div>
-
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <div className="rounded bg-card p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Content By Status</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Content By Status</h2>
+            <HelpTooltip text="Donut chart showing how content is distributed across the four statuses: Created, In Progress, Finalized, and Archived." />
+          </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -135,7 +149,10 @@ function DashboardLoaded({
         </div>
 
         <div className="rounded bg-card p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Top Roles By Content</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Top Roles By Content</h2>
+            <HelpTooltip text="Bar chart showing which job positions have the most content assigned to them. Up to 6 roles are shown." />
+          </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={contentByRole} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
@@ -162,7 +179,10 @@ function DashboardLoaded({
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="overflow-x-auto rounded bg-card p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Employees</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Employees</h2>
+            <HelpTooltip text="A list of the most recently added employees. Click a name to view their full profile." />
+          </div>
           {employees.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No employees yet.</p>
           ) : (
@@ -197,7 +217,10 @@ function DashboardLoaded({
         </div>
 
         <div className="overflow-x-auto rounded bg-card p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Recent Content</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Recent Content</h2>
+            <HelpTooltip text="The 6 most recent content items. Click a filename to open and edit it." />
+          </div>
           {allContent.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No content yet.</p>
           ) : (

@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import { trpc } from "@/lib/trpc";
 
 const TOOLTIP_STYLE = {
@@ -80,29 +81,56 @@ export function MetricsView() {
     <>
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Requests</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Requests</p>
+            <HelpTooltip
+              text="Total number of API requests made to the server since tracking began."
+              position="left"
+            />
+          </div>
           <p className="text-xl font-bold text-foreground">{metrics.data.totalRequests ?? 0}</p>
         </div>
 
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Errors</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Errors</p>
+            <HelpTooltip
+              text="Total number of failed API requests. High values may indicate system issues."
+              position="left"
+            />
+          </div>
           <p className="text-xl font-bold text-red-600">{metrics.data.errors ?? 0}</p>
         </div>
 
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Active Users</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Active Users</p>
+            <HelpTooltip
+              text="Number of unique users who have made requests recently."
+              position="left"
+            />
+          </div>
           <p className="text-xl font-bold text-hanover-green">{metrics.data.activeUsers ?? 0}</p>
         </div>
 
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Error Rate</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Error Rate</p>
+            <HelpTooltip
+              text="Percentage of requests that resulted in an error. Values above 5% warrant investigation."
+              position="left"
+            />
+          </div>
           <p className="text-xl font-bold text-foreground">{(errorRate * 100).toFixed(2)}%</p>
         </div>
       </div>
 
       <div className="mb-8 grid gap-4 lg:grid-cols-2">
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <h2 className="mb-3 text-xl font-semibold text-foreground">Document Activity</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-foreground">Document Activity</h2>
+            <HelpTooltip text="Bar chart showing total uploads, downloads, edits, and deletes across all content." />
+          </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -130,7 +158,10 @@ export function MetricsView() {
         </div>
 
         <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <h2 className="mb-3 text-xl font-semibold text-foreground">Top Active Users</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-foreground">Top Active Users</h2>
+            <HelpTooltip text="The 6 users with the most recent activity. Based on the audit log." />
+          </div>
           <div className="h-72">
             {topUsersData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -169,7 +200,10 @@ export function MetricsView() {
       </div>
 
       <div className="mb-8">
-        <h2 className="mb-3 text-xl font-semibold text-foreground">Recent Activity</h2>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-foreground">Recent Activity</h2>
+          <HelpTooltip text="The 10 most recent actions taken by users — uploads, edits, downloads, and deletes." />
+        </div>
 
         <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
           {auditRecent.data?.slice(0, 10).map((a) => (
@@ -197,7 +231,10 @@ export function MetricsView() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-xl font-semibold text-foreground">System Performance</h2>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-foreground">System Performance</h2>
+          <HelpTooltip text="The 10 most recent API requests showing route, HTTP method, status, and response time in milliseconds." />
+        </div>
 
         <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
           <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
