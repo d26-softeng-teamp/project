@@ -396,9 +396,7 @@ function UserDashboardPage() {
                       </span>
                     </td>
                     <td className="px-2 py-3 text-muted-foreground">
-                      {item.last_modified
-                        ? new Date(item.last_modified).toLocaleDateString()
-                        : "—"}
+                      {item.last_modified ? new Date(item.last_modified).toLocaleDateString() : "—"}
                     </td>
                   </tr>
                 ))}
@@ -461,9 +459,21 @@ function UserDashboardPage() {
           <SwappablePanel
             storageKey="userdash.bottom"
             options={[
-              { key: "recent", label: "Recent", render: () => renderContentTable(recent, "My Recent Content") },
-              { key: "drafts", label: "Drafts", render: () => renderContentTable(recentDrafts, "My Drafts") },
-              { key: "finalized", label: "Finalized", render: () => renderContentTable(recentFinalized, "My Finalized") },
+              {
+                key: "recent",
+                label: "Recent",
+                render: () => renderContentTable(recent, "My Recent Content"),
+              },
+              {
+                key: "drafts",
+                label: "Drafts",
+                render: () => renderContentTable(recentDrafts, "My Drafts"),
+              },
+              {
+                key: "finalized",
+                label: "Finalized",
+                render: () => renderContentTable(recentFinalized, "My Finalized"),
+              },
             ]}
           />
         </div>

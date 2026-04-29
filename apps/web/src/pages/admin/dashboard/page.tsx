@@ -1,4 +1,4 @@
-import { Activity, LayoutGrid, Loader2 } from "lucide-react";
+import { Activity, LayoutGrid, Loader2, Tag } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import {
@@ -17,10 +17,11 @@ import { SwappablePanel } from "@/components/SwappablePanel";
 import type { RouterOutputs } from "@/lib/trpc.ts";
 import { trpc } from "@/lib/trpc.ts";
 import { MetricsView } from "@/pages/admin/metrics/page.tsx";
+import TagsPage from "@/pages/tags/TagsPage";
 import { formatStatus } from "@/utils/status";
 import { renderTag } from "@/utils/tag";
 
-type DashboardTab = "overview" | "metrics";
+type DashboardTab = "overview" | "metrics" | "tags";
 
 type EmployeeRow = RouterOutputs["employee"]["list"][number];
 type ContentRow = RouterOutputs["content"]["list"][number];
@@ -270,10 +271,7 @@ function DashboardLoaded({
                 paddingAngle={3}
               >
                 {contentByRole.map((entry, index) => (
-                  <Cell
-                    key={entry.name}
-                    fill={rolePieColors[index % rolePieColors.length]}
-                  />
+                  <Cell key={entry.name} fill={rolePieColors[index % rolePieColors.length]} />
                 ))}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -521,11 +519,13 @@ function DashboardPage() {
   const isLoading = tab === "overview" && (employees.isLoading || allContent.isLoading);
   const loadError = tab === "overview" ? (employees.error ?? allContent.error) : null;
 
-  const activeTab: DashboardTab = tab === "metrics" && !isAdmin ? "overview" : tab;
+  const activeTab: DashboardTab =
+    (tab === "metrics" || tab === "tags") && !isAdmin ? "overview" : tab;
 
   const tabs: { key: DashboardTab; label: string; icon: typeof LayoutGrid }[] = [
     { key: "overview", label: "Overview", icon: LayoutGrid },
     ...(isAdmin ? [{ key: "metrics" as const, label: "Metrics", icon: Activity }] : []),
+    ...(isAdmin ? [{ key: "tags" as const, label: "Tags", icon: Tag }] : []),
   ];
 
   return (
@@ -540,7 +540,9 @@ function DashboardPage() {
             <p className="mt-1 text-muted-foreground">
               {activeTab === "metrics"
                 ? "System and document activity metrics"
-                : "Overview of employees, content, and activity trends"}
+                : activeTab === "tags"
+                  ? "Manage content tags"
+                  : "Overview of employees, content, and activity trends"}
             </p>
           </div>
 
@@ -570,6 +572,8 @@ function DashboardPage() {
 
           {activeTab === "metrics" ? (
             <MetricsView />
+          ) : activeTab === "tags" ? (
+            <TagsPage />
           ) : isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-hanover-green" />

@@ -14,12 +14,12 @@ import { useSession } from "@/auth/session-context";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import AccountPage from "@/pages/account/page.tsx";
+import AdminDashboardPage from "@/pages/admin/dashboard/page.tsx";
 import UsersPage from "@/pages/admin/users/page.tsx";
 import UserFormPage from "@/pages/admin/users/user-form.tsx";
 import BusinessAnalystPage from "@/pages/business-analyst/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
 import ContentPage from "@/pages/content/page.tsx";
-import AdminDashboardPage from "@/pages/admin/dashboard/page.tsx";
 import UserDashboardPage from "@/pages/dashboard/page.tsx";
 import EmployeeDetailPage from "@/pages/employees/employee-detail.tsx";
 import EmployeesPage from "@/pages/employees/page.tsx";
@@ -71,7 +71,6 @@ function adminNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
     { label: "User Management", to: "/users" },
-    { label: "Tags", to: "/tags" },
     { label: "Dashboard", to: "/dashboard" },
   ];
 }

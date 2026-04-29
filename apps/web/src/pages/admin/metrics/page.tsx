@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc";
 
-import { capitalizeSplit } from "../../../../../../packages/utils/src/format.ts"
+import { capitalizeSplit } from "../../../../../../packages/utils/src/format.ts";
 
 type TrafficRange = "hour" | "day" | "week";
 
@@ -73,7 +73,8 @@ export function MetricsView() {
     { range: trafficRange },
     { refetchInterval: 5000 },
   );
-  const trafficRangeConfig = TRAFFIC_RANGES.find((r) => r.key === trafficRange) ?? TRAFFIC_RANGES[0];
+  const trafficRangeConfig =
+    TRAFFIC_RANGES.find((r) => r.key === trafficRange) ?? TRAFFIC_RANGES[0];
 
   if (metrics.isLoading || auditSummary.isLoading) {
     return (
@@ -335,7 +336,9 @@ export function MetricsView() {
                     <tbody>
                       {rows.map((row) => (
                         <tr key={row.role} className="border-b border-border last:border-0">
-                          <td className="px-3 py-2 font-medium text-foreground">{capitalizeSplit(row.role)}</td>
+                          <td className="px-3 py-2 font-medium text-foreground">
+                            {capitalizeSplit(row.role)}
+                          </td>
                           {STATUS_COLS.map((c) => {
                             const v = row.counts[c.key] ?? 0;
                             const intensity = v === 0 ? 0 : 0.1 + (v / max) * 0.5;
@@ -362,95 +365,91 @@ export function MetricsView() {
                 );
               })()
             ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                No content yet.
-              </div>
+              <div className="p-6 text-center text-sm text-muted-foreground">No content yet.</div>
             )}
           </div>
         </div>
       </div>
 
-        <div className="mb-8 grid gap-4 lg:grid-cols-2">
+      <div className="mb-8 grid gap-4 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-3 text-xl font-semibold text-foreground">System Performance</h2>
 
-          <div>
-            <h2 className="mb-3 text-xl font-semibold text-foreground">System Performance</h2>
-
-            <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
-
-              <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <span>Route</span>
-                <span>Method</span>
-                <span className="text-right">Status</span>
-                <span className="text-right">Duration</span>
-              </div>
-              {recentMetrics.data?.slice(0, 10).map((r) => (
-                <div
-                  key={r.id}
-                  className="grid grid-cols-[1fr_80px_80px_100px] items-center gap-4 p-3 text-sm"
+          <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+            <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Route</span>
+              <span>Method</span>
+              <span className="text-right">Status</span>
+              <span className="text-right">Duration</span>
+            </div>
+            {recentMetrics.data?.slice(0, 10).map((r) => (
+              <div
+                key={r.id}
+                className="grid grid-cols-[1fr_80px_80px_100px] items-center gap-4 p-3 text-sm"
+              >
+                <span className="truncate font-mono text-foreground">{r.route}</span>
+                <span className="uppercase text-muted-foreground">{r.method}</span>
+                <span
+                  className={`text-right font-medium ${
+                    r.status === "OK" ? "text-hanover-green" : "text-red-600"
+                  }`}
                 >
-                  <span className="truncate font-mono text-foreground">{r.route}</span>
-                  <span className="uppercase text-muted-foreground">{r.method}</span>
-                  <span
-                    className={`text-right font-medium ${
-                      r.status === "OK" ? "text-hanover-green" : "text-red-600"
-                    }`}
-                  >
-                    {r.status}
-                  </span>
-                  <span className="text-right text-muted-foreground">{r.durationMs}ms</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-baseline gap-3">
-              <h2 className="text-xl font-semibold text-foreground">Latency Percentiles</h2>
-              <p className="text-xs text-muted-foreground">
-                p95 ≥ 500ms highlighted. Sorted by p95 desc.
-              </p>
-            </div>
-            <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
-              <div className="grid grid-cols-[1fr_60px_70px_70px_70px] gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <span>Route</span>
-                <span className="text-right">N</span>
-                <span className="text-right">p50</span>
-                <span className="text-right">p95</span>
-                <span className="text-right">p99</span>
+                  {r.status}
+                </span>
+                <span className="text-right text-muted-foreground">{r.durationMs}ms</span>
               </div>
-              {routePercentiles.data && routePercentiles.data.length > 0 ? (
-                  [...routePercentiles.data]
-                      .sort((a, b) => b.p95 - a.p95)
-                      .slice(0, 10)
-                      .map((r) => {
-                        const isSlow = r.p95 >= 500;
-                        return (
-                            <div
-                                key={r.route}
-                                className="grid grid-cols-[1fr_60px_70px_70px_70px] items-center gap-3 p-3 text-sm"
-                            >
-                              <span className="truncate font-mono text-foreground">{r.route}</span>
-                              <span className="text-right text-muted-foreground">{r.count}</span>
-                              <span className="text-right text-muted-foreground">{r.p50}ms</span>
-                              <span
-                                  className={`text-right font-medium ${
-                                      isSlow ? "text-red-600" : "text-foreground"
-                                  }`}
-                              >
-                          {r.p95}ms
-                        </span>
-                              <span className="text-right text-muted-foreground">{r.p99}ms</span>
-                            </div>
-                        );
-                      })
-              ) : (
-                  <div className="p-6 text-center text-sm text-muted-foreground">
-                    No route data yet.
-                  </div>
-              )}
-            </div>
+            ))}
           </div>
         </div>
+
+        <div>
+          <div className="mb-3 flex items-baseline gap-3">
+            <h2 className="text-xl font-semibold text-foreground">Latency Percentiles</h2>
+            <p className="text-xs text-muted-foreground">
+              p95 ≥ 500ms highlighted. Sorted by p95 desc.
+            </p>
+          </div>
+          <div className="divide-y divide-border rounded border border-border bg-card shadow-sm">
+            <div className="grid grid-cols-[1fr_60px_70px_70px_70px] gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Route</span>
+              <span className="text-right">N</span>
+              <span className="text-right">p50</span>
+              <span className="text-right">p95</span>
+              <span className="text-right">p99</span>
+            </div>
+            {routePercentiles.data && routePercentiles.data.length > 0 ? (
+              [...routePercentiles.data]
+                .sort((a, b) => b.p95 - a.p95)
+                .slice(0, 10)
+                .map((r) => {
+                  const isSlow = r.p95 >= 500;
+                  return (
+                    <div
+                      key={r.route}
+                      className="grid grid-cols-[1fr_60px_70px_70px_70px] items-center gap-3 p-3 text-sm"
+                    >
+                      <span className="truncate font-mono text-foreground">{r.route}</span>
+                      <span className="text-right text-muted-foreground">{r.count}</span>
+                      <span className="text-right text-muted-foreground">{r.p50}ms</span>
+                      <span
+                        className={`text-right font-medium ${
+                          isSlow ? "text-red-600" : "text-foreground"
+                        }`}
+                      >
+                        {r.p95}ms
+                      </span>
+                      <span className="text-right text-muted-foreground">{r.p99}ms</span>
+                    </div>
+                  );
+                })
+            ) : (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No route data yet.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 }
