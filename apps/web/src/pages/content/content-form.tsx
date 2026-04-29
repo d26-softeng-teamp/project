@@ -6,11 +6,11 @@ import { ArrowLeft, Loader2, Lock, Pencil, Unlock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useSession } from "@/auth/session-context";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { type RouterOutputs, trpc } from "@/lib/trpc.ts";
 import { renderTag } from "@/utils/tag";
 import { TagInput } from "./tag-input";
-import { HelpTooltip } from "@/components/HelpTooltip";
 
 function formatDateField(date: Date | string | null | undefined): string {
   if (!date) return "";

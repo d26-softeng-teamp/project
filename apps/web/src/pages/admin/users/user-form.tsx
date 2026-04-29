@@ -3,9 +3,9 @@ import { TextInput } from "@myapp/ui/components/text-input";
 import { ArrowLeft, Camera, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { trpc } from "@/lib/trpc";
-import { HelpTooltip } from "@/components/HelpTooltip";
 
 const ROLES: AccountRole[] = [
   "admin",
