@@ -42,9 +42,9 @@ export function HelpTooltip({ text, position = "top" }: Props) {
 
       {visible && (
         <div
-          className={`absolute z-50 w-56 rounded border border-border bg-background p-2.5 text-xs text-foreground shadow-md ${positionClasses[position]}`}
+          className={`absolute z-50 w-52 rounded-lg border border-border bg-background px-3 py-2 text-xs leading-relaxed text-foreground shadow-lg ${positionClasses[position]}`}
         >
-          {text}
+          <p className="text-xs font-normal text-foreground">{text}</p>
         </div>
       )}
     </div>
