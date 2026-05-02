@@ -12,6 +12,7 @@ import {
   Loader2,
   Lock,
   Pencil,
+  Search,
   Sparkles,
   Tag as TagIcon,
   Unlock,
@@ -706,6 +707,224 @@ const canDisplayDocument = (url: string | undefined | null): boolean => {
   return SUPPORTED_EXTENSIONS.includes(extension);
 };
 
+
+function DocViewerWithMagnifier({
+                                  docs,
+                                  fileID,
+                                  filename,
+                                  url,
+                                  trackDownload,
+                                }: {
+  docs: { uri: string }[];
+  fileID: string;
+  filename: string;
+  url: string;
+  trackDownload: ReturnType<typeof trpc.content.trackDownload.useMutation>;
+}) {
+  const ZOOM_LEVELS = [1, 1.5, 2, 3];
+  const [magnifyMode, setMagnifyMode] = useState(false);
+  const [zoomIdx, setZoomIdx] = useState(0);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const panStart = useRef({ x: 0, y: 0, originX: 0, originY: 0, didDrag: false });
+  const scale = ZOOM_LEVELS[zoomIdx];
+
+  function reset() {
+    setZoomIdx(0);
+    setTranslate({ x: 0, y: 0 });
+  }
+
+  function toggleMagnify() {
+    if (magnifyMode) reset();
+    setMagnifyMode((v) => !v);
+  }
+
+  function onClick(e: React.MouseEvent) {
+    if (!magnifyMode) return;
+    if (panStart.current.didDrag) {
+      panStart.current.didDrag = false;
+      return;
+    }
+    const rect = areaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const nextIdx = (zoomIdx + 1) % ZOOM_LEVELS.length;
+    const nextScale = ZOOM_LEVELS[nextIdx];
+    if (nextScale === 1) {
+      setTranslate({ x: 0, y: 0 });
+    } else {
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const ratio = nextScale / scale;
+      setTranslate({
+        x: clickX - (clickX - translate.x) * ratio,
+        y: clickY - (clickY - translate.y) * ratio,
+      });
+    }
+    setZoomIdx(nextIdx);
+  }
+
+  function onMouseDown(e: React.MouseEvent) {
+    if (!magnifyMode || scale === 1) return;
+    setIsPanning(true);
+    panStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      originX: translate.x,
+      originY: translate.y,
+      didDrag: false,
+    };
+  }
+
+  useEffect(() => {
+    if (!isPanning) return;
+    function onMove(e: MouseEvent) {
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) panStart.current.didDrag = true;
+      setTranslate({
+        x: panStart.current.originX + dx,
+        y: panStart.current.originY + dy,
+      });
+    }
+    function onUp() {
+      setIsPanning(false);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isPanning]);
+
+  let cursor = "default";
+  if (magnifyMode) {
+    if (isPanning) cursor = "grabbing";
+    else if (scale > 1) cursor = "grab";
+    else cursor = "zoom-in";
+  }
+
+  return (
+      <div className="mx-auto mb-6 max-w-4xl overflow-hidden rounded-lg border border-gray-300 bg-muted text-black shadow-lg">
+        <style>{`.rdv-txt-container { white-space: pre; font-family: monospace; }
+    button.rdv-toolbar-btn[title='Download'],
+    button.rdv-toolbar-btn[title='Print'],
+    #pdf-download,
+    #pdf-print { display: none !important; }`}</style>
+
+        <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2">
+          <button
+              type="button"
+              onClick={toggleMagnify}
+              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  magnifyMode
+                      ? "bg-hanover-green text-white hover:bg-hanover-green/90"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+          >
+            <Search className="h-3.5 w-3.5" />
+            Magnifier
+          </button>
+          {scale > 1 && (
+              <div className="flex items-center gap-2">
+            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+              {scale.toFixed(1)}×
+            </span>
+                <button
+                    type="button"
+                    onClick={reset}
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Reset zoom"
+                >
+                  <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                  >
+                    <title>Reset</title>
+                    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                </button>
+              </div>
+          )}
+        </div>
+
+        <div
+            ref={areaRef}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            style={{ cursor, overflow: "hidden", position: "relative", height: "80vh", minHeight: 500 }}
+        >
+          <div
+              style={{
+                transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+                transformOrigin: "0 0",
+                transition: isPanning ? "none" : "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                width: "100%",
+                height: "100%",
+              }}
+          >
+            <DocViewer
+                documents={docs}
+                pluginRenderers={DocViewerRenderers}
+                config={{
+                  header: { disableHeader: true, disableFileName: true },
+                }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  pointerEvents: magnifyMode ? "none" : "auto",
+                }}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end border-t border-border bg-background px-4 py-2.5">
+          <button
+              type="button"
+              onClick={async () => {
+                trackDownload.mutate({ fileID });
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = filename || "download";
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+              }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-hanover-green px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-hanover-green/90 active:scale-95"
+          >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+            >
+              <title>Download</title>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download
+          </button>
+        </div>
+      </div>
+  );
+}
+
 function ContentFormFields({
   isEditing,
   fileID,
@@ -872,57 +1091,13 @@ function ContentFormFields({
             <HighlightedExcerpt text={extractedText} query={searchQuery} />
           )}
           {url && canDisplayDocument(url) ? (
-            <div className="mx-auto mb-6 max-w-4xl overflow-hidden rounded-lg border border-gray-300 bg-muted text-black shadow-lg">
-              <style>{`.rdv-txt-container { white-space: pre; font-family: monospace; }
-    button.rdv-toolbar-btn[title='Download'],
-    button.rdv-toolbar-btn[title='Print'],
-    #pdf-download,
-    #pdf-print { display: none !important; }`}</style>
-
-              <DocViewer
-                documents={docs}
-                pluginRenderers={DocViewerRenderers}
-                config={{
-                  header: { disableHeader: true, disableFileName: true },
-                }}
-                style={{ height: "80vh", minHeight: 500, width: "100%" }}
+              <DocViewerWithMagnifier
+                  docs={docs}
+                  fileID={fileID}
+                  filename={filename}
+                  url={url}
+                  trackDownload={trackDownload}
               />
-
-              <div className="flex justify-end border-t border-border bg-background px-4 py-2.5">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    trackDownload.mutate({ fileID });
-                    const res = await fetch(url);
-                    const blob = await res.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = filename || "download";
-                    a.click();
-                    URL.revokeObjectURL(blobUrl);
-                  }}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-hanover-green px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-hanover-green/90 active:scale-95"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download
-                </button>
-              </div>
-            </div>
           ) : null}
           <form className="space-y-6" onSubmit={onSubmit}>
             {showFileSummary ? (
