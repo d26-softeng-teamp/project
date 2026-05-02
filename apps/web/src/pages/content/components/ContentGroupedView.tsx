@@ -165,7 +165,7 @@ export function ContentGroupedView({
     <div className="flex flex-col gap-4">
       {visibleGroups.map((key) => {
         const groupItems = buckets.get(key) ?? [];
-        const isCollapsed = !!collapsedGroups[key];
+        const isCollapsed = collapsedGroups[key];
         const overdueCount = groupItems.filter(isOverdue).length;
 
         return (
@@ -213,7 +213,7 @@ export function ContentGroupedView({
                         ))}
                       </div>
                     ) : (
-                      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm shadow-black/[0.02]">
+                      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm shadow-black/2">
                         <ContentListHeader />
                         <div className="flex flex-col divide-y divide-border/70">
                           {groupItems.map((item) => (

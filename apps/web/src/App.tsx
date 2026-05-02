@@ -16,14 +16,15 @@ import {
   useSearchParams,
 } from "react-router";
 import { useSession } from "@/auth/session-context";
-import { useNotificationReadState } from "@/hooks/use-notification-read-state";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import AboutPage from "@/pages/about/page.tsx";
 import AccountPage from "@/pages/account/page.tsx";
 import UsersPage from "@/pages/admin/users/page.tsx";
 import UserFormPage from "@/pages/admin/users/user-form.tsx";
+import AnnouncementsPage from "@/pages/announcements/page.tsx";
 import BusinessAnalystPage from "@/pages/business-analyst/page.tsx";
+import CalendarPage from "@/pages/calendar/page.tsx";
 import ContentFormPage from "@/pages/content/content-form.tsx";
 import ContentPage from "@/pages/content/page.tsx";
 import CreditsPage from "@/pages/credits/page.tsx";
@@ -33,9 +34,9 @@ import EmployeesPage from "@/pages/employees/page.tsx";
 import HelpPage from "@/pages/help/page.tsx";
 import HeroLayout from "@/pages/hero/layout.tsx";
 import LoginFormPage from "@/pages/login.tsx";
-import NotificationsPage from "@/pages/notifications/page.tsx";
-import TagsPage from "@/pages/tags/TagsPage";
+import ActivityPage from "@/pages/notifications/page.tsx";
 import UnderwriterPage from "@/pages/underwriter/page.tsx";
+import { useAppPreferences } from "@/store/app-preferences";
 
 function LegacyContentEditRedirect() {
   const { id } = useParams<{ id: string }>();
@@ -96,7 +97,8 @@ function describePage(pathname: string) {
     return {
       path: pathname,
       title: "Dashboard",
-      description: "Admin metrics, audit activity, content currency, and review health.",
+      description:
+        "Role-aware dashboard: admin metrics and content health for admins, personal content overview for everyone else.",
     };
   }
   if (pathname === "/employees" || pathname.startsWith("/employees/")) {
@@ -379,19 +381,30 @@ function LoginRoute() {
 function adminNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
-    { label: "Users", to: "/users" },
-    { label: "Tags", to: "/tags" },
     { label: "Dashboard", to: "/dashboard" },
-    { label: "Help", to: "/help" },
+    { label: "Users", to: "/users" },
   ];
+}
+
+/** Redirect that selects the Tags tab in the dashboard before navigating. */
+function TagsRedirect() {
+  useAppPreferences.getState().setDashboardTab("tags");
+  return <Navigate to="/dashboard" replace />;
+}
+
+/** Renders the admin dashboard for admins and the user dashboard for everyone else. */
+function DashboardRoute() {
+  const accessQuery = trpc.user.myAccess.useQuery();
+  if (accessQuery.isLoading) return <AuthSplash />;
+  return <DashboardPage />;
 }
 
 /** Nav items for employee roles. */
 function employeeNavItems() {
   return [
     { label: "Content", to: "/hero/content" },
+    { label: "Dashboard", to: "/dashboard" },
     { label: "Coworkers", to: "/employees" },
-    { label: "Help", to: "/help" },
   ];
 }
 
@@ -409,6 +422,9 @@ function ProtectedLayout() {
   const notificationsQuery = trpc.notifications.myList.useQuery(undefined, {
     enabled: Boolean(session) && Boolean(accessQuery.data),
   });
+  const announcementsQuery = trpc.notifications.listAnnouncements.useQuery(undefined, {
+    enabled: Boolean(session) && Boolean(accessQuery.data),
+  });
   const gompeiUnreadQuery = trpc.chat.unreadCount.useQuery(undefined, {
     enabled: Boolean(session) && Boolean(accessQuery.data),
   });
@@ -418,14 +434,15 @@ function ProtectedLayout() {
       enabled: Boolean(session?.user.id) && Boolean(accessQuery.data),
     },
   );
-  const { unreadCount, unreadRows } = useNotificationReadState(
-    notificationsQuery.data,
-    session?.user.id,
-  );
+  const activityUnread = notificationsQuery.data?.unreadCount ?? 0;
+  const announcementUnread = announcementsQuery.data?.unreadCount ?? 0;
+  const unreadCount = activityUnread + announcementUnread;
+  const unreadRows = notificationsQuery.data?.items.filter((r) => !r.isRead) ?? [];
+  const dashboardTab = useAppPreferences((state) => state.dashboardTab);
   const isContentPage = location.pathname === "/hero" || location.pathname === "/hero/content";
   const isUsersPage = location.pathname === "/users";
   const isUsersRoute = location.pathname.startsWith("/users/");
-  const isTagsPage = location.pathname === "/tags";
+  const isDashboardTagsTab = location.pathname === "/dashboard" && dashboardTab === "tags";
 
   const focusCurrentSearch = useCallback(() => {
     if (isUsersPage) {
@@ -438,7 +455,7 @@ function ProtectedLayout() {
       return;
     }
 
-    if (isTagsPage) {
+    if (isDashboardTagsTab) {
       window.dispatchEvent(new Event(TAGS_SEARCH_FOCUS_EVENT));
       return;
     }
@@ -449,7 +466,7 @@ function ProtectedLayout() {
     }
 
     navigate("/hero/content", { state: { focusContentSearch: true } });
-  }, [isContentPage, isTagsPage, isUsersPage, isUsersRoute, navigate]);
+  }, [isContentPage, isDashboardTagsTab, isUsersPage, isUsersRoute, navigate]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -479,11 +496,12 @@ function ProtectedLayout() {
   const username = me?.name;
   const submittedDocuments = submittedContentQuery.data ?? [];
   const now = Date.now();
-  const dueSoon = (notificationsQuery.data ?? []).filter((row) => {
+  const notificationItems = notificationsQuery.data?.items ?? [];
+  const dueSoon = notificationItems.filter((row) => {
     const message = row.message.toLowerCase();
     return message.includes("due") || message.includes("expires");
   }).length;
-  const overdue = (notificationsQuery.data ?? []).filter((row) => {
+  const overdue = notificationItems.filter((row) => {
     const message = row.message.toLowerCase();
     return message.includes("passed") || message.includes("expired");
   }).length;
@@ -611,12 +629,16 @@ function ProtectedLayout() {
         items={navItems}
         brandTo="/hero"
         accountMenu={{
-          notificationsTo: "/notifications",
-          unreadNotificationCount: unreadCount,
+          notificationsTo: "/activity",
+          unreadNotificationCount: activityUnread,
+          announcementUnreadCount: announcementUnread,
           gompeiUnreadCount: gompeiUnreadQuery.data ?? 0,
           settingsTo: "/account",
           links: [
+            { label: "Calendar", to: "/calendar" },
+            { label: "Announcements", to: "/announcements" },
             { label: "Gompei", to: "/gompei" },
+            { label: "Help", to: "/help" },
             { label: "About", to: "/about" },
             { label: "Credits", to: "/credits" },
           ],
@@ -675,19 +697,22 @@ function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/new" element={<UserFormPage />} />
             <Route path="/users/:id" element={<UserFormPage />} />
-            <Route path="/tags" element={<TagsPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/tags" element={<TagsRedirect />} />
           </Route>
 
           {/* Shared */}
+          <Route path="/dashboard" element={<DashboardRoute />} />
           <Route path="/gompei" element={<GompeiPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/activity" element={<ActivityPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/credits" element={<CreditsPage />} />
 
           {/* Legacy redirects */}
+          <Route path="/notifications" element={<Navigate to="/activity" replace />} />
           <Route path="/content" element={<Navigate to="/hero/content" replace />} />
           <Route path="/content/new" element={<Navigate to="/hero/content/new" replace />} />
           <Route path="/content/:id/edit" element={<LegacyContentEditRedirect />} />

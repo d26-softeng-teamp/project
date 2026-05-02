@@ -7,7 +7,6 @@ const knownActivityActions = [
   "edit",
   "delete",
   "ownership-update",
-  "notification-view",
 ] as const;
 
 type ActivityAction = (typeof knownActivityActions)[number];
@@ -29,7 +28,6 @@ function blankActivityCounts(): ActivityCounts {
     edit: 0,
     delete: 0,
     "ownership-update": 0,
-    "notification-view": 0,
     other: 0,
   };
 }
@@ -78,16 +76,15 @@ export const auditRouter = router({
   }),
 
   getSummary: adminPortalProcedure.query(async ({ ctx }) => {
-    const [uploads, views, downloads, edits, deletes, notificationViews] = await Promise.all([
+    const [uploads, views, downloads, edits, deletes] = await Promise.all([
       ctx.prisma.auditEvent.count({ where: { action: "upload" } }),
       ctx.prisma.auditEvent.count({ where: { action: "view" } }),
       ctx.prisma.auditEvent.count({ where: { action: "download" } }),
       ctx.prisma.auditEvent.count({ where: { action: "edit" } }),
       ctx.prisma.auditEvent.count({ where: { action: "delete" } }),
-      ctx.prisma.auditEvent.count({ where: { action: "notification-view" } }),
     ]);
 
-    return { uploads, views, downloads, edits, deletes, notificationViews };
+    return { uploads, views, downloads, edits, deletes };
   }),
 
   getTopUsers: adminPortalProcedure.query(async ({ ctx }) => {

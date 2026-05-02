@@ -86,6 +86,7 @@ export default function ContentPage() {
     tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
     tagMatchMode: filters.tagIds.length > 0 ? filters.tagMode : undefined,
     pinnedTagId: filters.pinnedTagId ?? undefined,
+    owner_id: filters.mine && currentUserId ? currentUserId : undefined,
   });
 
   const { setAll, isFavorited } = useFavorites();

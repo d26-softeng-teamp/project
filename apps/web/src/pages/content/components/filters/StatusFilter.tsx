@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ContentFilters as ContentFiltersState } from "@/store/content-filters";
+import { formatStatus } from "@/utils/status";
 import { FilterSectionHeader } from "./FilterSectionHeader";
 import { SECTION_MOTION } from "./shared";
 
@@ -26,7 +27,7 @@ export function StatusFilter({ filters }: Props) {
           <motion.div layout {...SECTION_MOTION} className="flex flex-col overflow-hidden">
             {STATUS_OPTIONS.map((s) => {
               const active = filters.status === s;
-              const label = s === "" ? "All" : s === "in-progress" ? "In-Progress" : s;
+              const label = s === "" ? "All" : formatStatus(s);
               return (
                 <button
                   type="button"

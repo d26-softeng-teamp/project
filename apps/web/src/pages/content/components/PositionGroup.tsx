@@ -86,7 +86,7 @@ function PositionListItem({
         isOverdue ? "bg-red-50/40" : ""
       }`}
     >
-      <span className="min-w-0 flex-[2] truncate font-medium text-foreground">
+      <span className="min-w-0 flex-2 truncate font-medium text-foreground">
         {item.filename ?? "Untitled"}
       </span>
 
@@ -186,7 +186,7 @@ export function PositionGroup({
   getStatusBadge,
 }: Props) {
   const groupKey = `position:${label}`;
-  const isCollapsed = useContentFilterStore((state) => !!state.collapsedGroups[groupKey]);
+  const isCollapsed = useContentFilterStore((state) => state.collapsedGroups[groupKey]);
   const setGroupCollapsed = useContentFilterStore((state) => state.setGroupCollapsed);
   const open = !isCollapsed;
 

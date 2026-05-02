@@ -2,6 +2,7 @@ import { AlertTriangle, Clock, Loader2, Lock, Sparkles, Star, Unlock } from "luc
 import { Link } from "react-router";
 import { useFavorites } from "@/store/favorites";
 import type { ContentItem } from "@/types/content";
+import { formatStatus } from "@/utils/status";
 import { renderTag } from "@/utils/tag";
 import { CONTENT_LIST_GRID } from "./ContentListHeader";
 
@@ -161,7 +162,7 @@ export function ContentListRow({
             item.document_status,
           )}`}
         >
-          {item.document_status ?? "—"}
+          {formatStatus(item.document_status)}
         </span>
       </div>
 

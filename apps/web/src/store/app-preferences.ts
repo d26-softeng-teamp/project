@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type DashboardTab = "overview" | "metrics";
+export type DashboardTab = "overview" | "metrics" | "tags";
 
 type AppPreferencesState = {
   coworkerSearch: string;
@@ -9,6 +9,7 @@ type AppPreferencesState = {
   tagsSearch: string;
   dashboardTab: DashboardTab;
   heroExpanded: boolean;
+  dashboardWidgetOrder: string[];
 };
 
 type AppPreferencesActions = {
@@ -17,9 +18,18 @@ type AppPreferencesActions = {
   setTagsSearch: (search: string) => void;
   setDashboardTab: (tab: DashboardTab) => void;
   setHeroExpanded: (expanded: boolean) => void;
+  setDashboardWidgetOrder: (order: string[]) => void;
+  swapDashboardWidgets: (a: string, b: string) => void;
 };
 
 type AppPreferences = AppPreferencesState & AppPreferencesActions;
+
+export const DEFAULT_DASHBOARD_WIDGET_ORDER = [
+  "content-by-status",
+  "side-panel",
+  "employees",
+  "recent-content",
+];
 
 const DEFAULT_PREFERENCES: AppPreferencesState = {
   coworkerSearch: "",
@@ -27,6 +37,7 @@ const DEFAULT_PREFERENCES: AppPreferencesState = {
   tagsSearch: "",
   dashboardTab: "overview",
   heroExpanded: true,
+  dashboardWidgetOrder: DEFAULT_DASHBOARD_WIDGET_ORDER,
 };
 
 export const useAppPreferences = create<AppPreferences>()(
@@ -38,15 +49,33 @@ export const useAppPreferences = create<AppPreferences>()(
       setTagsSearch: (tagsSearch) => set({ tagsSearch }),
       setDashboardTab: (dashboardTab) => set({ dashboardTab }),
       setHeroExpanded: (heroExpanded) => set({ heroExpanded }),
+      setDashboardWidgetOrder: (dashboardWidgetOrder) => set({ dashboardWidgetOrder }),
+      swapDashboardWidgets: (a, b) =>
+        set((state) => {
+          const order = [...state.dashboardWidgetOrder];
+          const ai = order.indexOf(a);
+          const bi = order.indexOf(b);
+          if (ai === -1 || bi === -1) return state;
+          [order[ai], order[bi]] = [order[bi], order[ai]];
+          return { dashboardWidgetOrder: order };
+        }),
     }),
     {
-      name: "app.preferences.v1",
-      partialize: ({ coworkerSearch, usersSearch, tagsSearch, dashboardTab, heroExpanded }) => ({
+      name: "app.preferences.v2",
+      partialize: ({
         coworkerSearch,
         usersSearch,
         tagsSearch,
         dashboardTab,
         heroExpanded,
+        dashboardWidgetOrder,
+      }) => ({
+        coworkerSearch,
+        usersSearch,
+        tagsSearch,
+        dashboardTab,
+        heroExpanded,
+        dashboardWidgetOrder,
       }),
     },
   ),

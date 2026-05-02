@@ -1,11 +1,13 @@
 import {
-  Bell,
   Bot,
   Boxes,
+  CalendarDays,
   CircleHelp,
   FileText,
+  Inbox,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Settings,
   Tags,
   UserRound,
@@ -38,6 +40,7 @@ interface TopNavProps {
     photoUrl?: string | null;
     notificationsTo?: string;
     unreadNotificationCount?: number;
+    announcementUnreadCount?: number;
     gompeiUnreadCount?: number;
   };
 }
@@ -64,6 +67,9 @@ function TopNav({ items, brandTo, accountMenu }: TopNavProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const hasUnreadNotifications = Boolean(
     accountMenu?.unreadNotificationCount && accountMenu.unreadNotificationCount > 0,
+  );
+  const hasUnreadAnnouncements = Boolean(
+    accountMenu?.announcementUnreadCount && accountMenu.announcementUnreadCount > 0,
   );
   const hasUnreadGompei = Boolean(
     accountMenu?.gompeiUnreadCount && accountMenu.gompeiUnreadCount > 0,
@@ -177,18 +183,21 @@ function TopNav({ items, brandTo, accountMenu }: TopNavProps) {
                         />
                       </span>
                     )}
-                    {hasUnreadNotifications || hasUnreadGompei ? (
+                    {hasUnreadNotifications || hasUnreadAnnouncements || hasUnreadGompei ? (
                       <span
                         className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-hanover-green ring-2 ring-hanover-deepblue"
                         aria-hidden
                       />
                     ) : null}
                   </span>
-                  {hasUnreadNotifications || hasUnreadGompei ? (
+                  {hasUnreadNotifications || hasUnreadAnnouncements || hasUnreadGompei ? (
                     <span className="sr-only">
                       {[
                         hasUnreadNotifications
                           ? `${accountMenu.unreadNotificationCount} unread notifications`
+                          : null,
+                        hasUnreadAnnouncements
+                          ? `${accountMenu.announcementUnreadCount} unread announcements`
                           : null,
                         hasUnreadGompei
                           ? `${accountMenu.gompeiUnreadCount} unread Gompei chats`
@@ -213,14 +222,16 @@ function TopNav({ items, brandTo, accountMenu }: TopNavProps) {
                           className={cn(menuItemClass, "justify-between gap-4 no-underline")}
                         >
                           <span className="flex items-center gap-2">
-                            <Bell className="size-4" aria-hidden strokeWidth={2} />
-                            Notifications
+                            <Inbox className="size-4" aria-hidden strokeWidth={2} />
+                            Activity
                           </span>
                           {hasUnreadNotifications ? (
                             <>
-                              <span className="size-2 rounded-full bg-hanover-green" aria-hidden />
+                              <span className="rounded-full bg-hanover-green px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                {accountMenu.unreadNotificationCount}
+                              </span>
                               <span className="sr-only">
-                                {accountMenu.unreadNotificationCount} unread notifications
+                                {accountMenu.unreadNotificationCount} unread items
                               </span>
                             </>
                           ) : null}
@@ -251,6 +262,20 @@ function TopNav({ items, brandTo, accountMenu }: TopNavProps) {
                                 />
                               ) : null}
                             </span>
+                          ) : item.label === "Calendar" ? (
+                            <CalendarDays className="size-4" aria-hidden strokeWidth={2} />
+                          ) : item.label === "Announcements" ? (
+                            <span className="relative inline-flex">
+                              <Megaphone className="size-4" aria-hidden strokeWidth={2} />
+                              {hasUnreadAnnouncements ? (
+                                <span
+                                  className="absolute -right-1 -top-1 size-2 rounded-full bg-hanover-green"
+                                  aria-hidden
+                                />
+                              ) : null}
+                            </span>
+                          ) : item.label === "Activity" ? (
+                            <Inbox className="size-4" aria-hidden strokeWidth={2} />
                           ) : (
                             <CircleHelp className="size-4" aria-hidden strokeWidth={2} />
                           )}

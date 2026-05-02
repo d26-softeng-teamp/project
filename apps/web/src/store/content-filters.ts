@@ -19,6 +19,7 @@ type ContentFilterState = {
   tagIds: number[];
   tagMode: TagMode;
   pinnedTagId: number | null;
+  mine: boolean;
   sort: ContentSort;
   sortDir: ContentSortDir;
   group: ContentGroup;
@@ -44,6 +45,7 @@ type ContentFilterActions = {
   setTagIds: (ids: number[]) => void;
   setTagMode: (mode: TagMode) => void;
   setPinnedTagId: (id: number | null) => void;
+  setMine: (value: boolean) => void;
   setSort: (value: ContentSort) => void;
   setSortDir: (value: ContentSortDir) => void;
   setGroup: (value: ContentGroup) => void;
@@ -66,6 +68,7 @@ const DEFAULT_FILTERS: ContentFilterState = {
   tagIds: [],
   tagMode: "any",
   pinnedTagId: null,
+  mine: false,
   sort: "due",
   sortDir: "asc",
   group: "role",
@@ -94,6 +97,7 @@ const FILTER_PARAM_KEYS = [
   "tagIds",
   "tagMode",
   "pinnedTagId",
+  "mine",
 ] as const;
 
 function isContentView(value: string | null): value is ContentView {
@@ -150,6 +154,7 @@ function readFiltersFromParams(params: URLSearchParams): Partial<ContentFilterSt
     tagIds: parseTagIds(params.get("tagIds")),
     tagMode: params.get("tagMode") === "all" ? "all" : DEFAULT_FILTERS.tagMode,
     pinnedTagId: parsePinnedTagId(params.get("pinnedTagId")),
+    mine: params.get("mine") === "1",
     sort: isContentSort(sort) ? sort : DEFAULT_FILTERS.sort,
     sortDir: isContentSortDir(sortDir) ? sortDir : DEFAULT_FILTERS.sortDir,
     group: isContentGroup(group) ? group : DEFAULT_FILTERS.group,
@@ -198,6 +203,12 @@ function writeFiltersToParams(filters: ContentFilterState, currentParams: URLSea
     next.set("pinnedTagId", String(filters.pinnedTagId));
   }
 
+  if (filters.mine) {
+    next.set("mine", "1");
+  } else {
+    next.delete("mine");
+  }
+
   return next;
 }
 
@@ -218,6 +229,7 @@ export const useContentFilterStore = create<ContentFilters>()(
       setTagIds: (tagIds) => set({ tagIds }),
       setTagMode: (tagMode) => set({ tagMode }),
       setPinnedTagId: (pinnedTagId) => set({ pinnedTagId }),
+      setMine: (mine) => set({ mine }),
       setSort: (sort) => set({ sort }),
       setSortDir: (sortDir) => set({ sortDir }),
       setGroup: (group) => set({ group }),

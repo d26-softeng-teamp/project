@@ -669,13 +669,49 @@ model UserProfile {
   checkedOutContent ContentManagement[] @relation("CheckedOutContent")
   auth_user         auth_users          @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  metricsEvents MetricsEvent[]
-  auditEvents   AuditEvent[]
-  userSessions  UserSession[]
-  favorites     Favorite[]
-  chatConversations ChatConversation[]
+  metricsEvents         MetricsEvent[]
+  auditEvents           AuditEvent[]
+  userSessions          UserSession[]
+  favorites             Favorite[]
+  chatConversations     ChatConversation[]
+  notificationStates    NotificationState[]
+  announcements         Announcement[]
 
   @@map("users")
+  @@schema("public")
+}
+
+model NotificationState {
+  userId          String    @db.Uuid
+  notificationKey String    @db.VarChar(200)
+  readAt          DateTime?
+  pinnedAt        DateTime?
+  deletedAt       DateTime?
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, notificationKey])
+  @@index([userId, deletedAt, pinnedAt, readAt])
+  @@map("notification_state")
+  @@schema("public")
+}
+
+model Announcement {
+  id          String    @id @default(uuid()) @db.Uuid
+  authorId    String    @db.Uuid
+  title       String    @db.VarChar(200)
+  body        String    @db.Text
+  urgency     String    @default("info") @db.VarChar(20)
+  audience    String    @default("all") @db.VarChar(20)
+  targetRoles String[]  @default([])
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+
+  author UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
+  @@index([audience])
+  @@map("announcement")
   @@schema("public")
 }
 

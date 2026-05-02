@@ -41,7 +41,6 @@ type ActivityReportRow = {
   edits: number;
   deletes: number;
   ownershipUpdates: number;
-  notificationViews: number;
   other: number;
   total: number;
   latestAt: Date | null;
@@ -59,7 +58,6 @@ function formatAction(action: string) {
     edit: "edited",
     delete: "deleted",
     "ownership-update": "updated ownership for",
-    "notification-view": "viewed notification for",
   };
 
   return map[action] ?? action;
@@ -259,7 +257,6 @@ function getOrCreateActivityGroup(
       edits: 0,
       deletes: 0,
       ownershipUpdates: 0,
-      notificationViews: 0,
       other: 0,
       total: 0,
       latestAt: null,
@@ -287,7 +284,6 @@ export function buildActivityReportRows(auditEvents: AuditEventRow[], content: C
     else if (event.action === "edit") row.edits += 1;
     else if (event.action === "delete") row.deletes += 1;
     else if (event.action === "ownership-update") row.ownershipUpdates += 1;
-    else if (event.action === "notification-view") row.notificationViews += 1;
     else row.other += 1;
 
     if (createdAt && (!row.latestAt || createdAt.getTime() > row.latestAt.getTime())) {
@@ -366,7 +362,7 @@ export function DashboardReports({
               No recent transaction activity.
             </p>
           ) : (
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-180 text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-2 py-3 text-left font-semibold text-foreground">Owner</th>
@@ -417,7 +413,7 @@ export function DashboardReports({
           {contentRows.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No content records.</p>
           ) : (
-            <table className="w-full min-w-[680px] text-sm">
+            <table className="w-full min-w-170 text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-2 py-3 text-left font-semibold text-foreground">Owner</th>
@@ -465,7 +461,7 @@ export function DashboardReports({
             No expiration or review dates.
           </p>
         ) : (
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-205 text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-2 py-3 text-left font-semibold text-foreground">Owner</th>
@@ -556,7 +552,6 @@ export function MetricsView() {
     { name: "Downloads", value: auditSummary.data?.downloads ?? 0 },
     { name: "Edits", value: auditSummary.data?.edits ?? 0 },
     { name: "Deletes", value: auditSummary.data?.deletes ?? 0 },
-    { name: "Notifications", value: auditSummary.data?.notificationViews ?? 0 },
   ];
 
   const activeUserCounts = new Map<string, number>();
@@ -572,42 +567,40 @@ export function MetricsView() {
 
   return (
     <>
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            <LabelWithInfo label="Requests" title="Requests">
-              Total API requests captured by the metrics middleware.
-            </LabelWithInfo>
-          </p>
-          <p className="text-xl font-bold text-foreground">{metrics.data.totalRequests ?? 0}</p>
-        </div>
-
-        <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            <LabelWithInfo label="Errors" title="Errors">
-              API requests recorded with an error status.
-            </LabelWithInfo>
-          </p>
-          <p className="text-xl font-bold text-red-600">{metrics.data.errors ?? 0}</p>
-        </div>
-
-        <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            <LabelWithInfo label="Active Users" title="Active Users">
-              Distinct users represented in recent metrics events.
-            </LabelWithInfo>
-          </p>
-          <p className="text-xl font-bold text-hanover-green">{metrics.data.activeUsers ?? 0}</p>
-        </div>
-
-        <div className="rounded border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            <LabelWithInfo label="Error Rate" title="Error Rate">
-              Percentage of tracked requests that resulted in an error.
-            </LabelWithInfo>
-          </p>
-          <p className="text-xl font-bold text-foreground">{(errorRate * 100).toFixed(2)}%</p>
-        </div>
+      <div className="mb-8 grid grid-cols-2 gap-4 stagger-children md:grid-cols-4">
+        {[
+          {
+            label: "Requests",
+            value: metrics.data.totalRequests ?? 0,
+            info: "Total API requests captured by the metrics middleware.",
+          },
+          {
+            label: "Errors",
+            value: metrics.data.errors ?? 0,
+            info: "API requests recorded with an error status.",
+          },
+          {
+            label: "Active Users",
+            value: metrics.data.activeUsers ?? 0,
+            info: "Distinct users represented in recent metrics events.",
+          },
+          {
+            label: "Error Rate",
+            value: `${(errorRate * 100).toFixed(2)}%`,
+            info: "Percentage of tracked requests that resulted in an error.",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-lg border border-border border-t-4 border-t-hanover-green bg-card p-4 shadow-sm hover:shadow-md hover:border-t-hanover-green/90 sm:p-5"
+          >
+            <div className="text-3xl font-bold tracking-tight text-foreground">{stat.value}</div>
+            <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span>{stat.label}</span>
+              <InfoPopover title={stat.label}>{stat.info}</InfoPopover>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mb-8 grid gap-4 lg:grid-cols-2">
@@ -615,7 +608,7 @@ export function MetricsView() {
           <h2 className="mb-3 flex items-center gap-2 text-xl font-semibold text-foreground">
             Document Activity
             <InfoPopover title="Document Activity">
-              Upload, view, download, edit, delete, and notification-view audit counts.
+              Upload, view, download, edit, and delete audit counts.
             </InfoPopover>
           </h2>
           <div className="h-72">

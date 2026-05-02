@@ -1,6 +1,6 @@
 import { LoginLayout } from "@myapp/ui/components/login-layout";
 import { TextInput } from "@myapp/ui/components/text-input";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "@/lib/supabase";
@@ -10,6 +10,7 @@ function LoginFormPage({ bannerText }: { bannerText?: string }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const login = trpc.login.login.useMutation({
     async onSuccess(data) {
@@ -48,14 +49,30 @@ function LoginFormPage({ bannerText }: { bannerText?: string }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <TextInput
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded border border-border bg-background px-4 py-2 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-hanover-green"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
 
           {login.isError && (
             <div className="animate-fade-in-down rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
