@@ -20,7 +20,8 @@ export const styles = {
     border: "1px solid var(--color-border)",
     boxShadow: "0 18px 44px rgba(15,23,42,0.18)",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    transition: "width 0.7s cubic-bezier(0.16, 1, 0.3, 1), padding 0.7s cubic-bezier(0.16, 1, 0.3, 1), gap 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
+    transition:
+      "width 0.7s cubic-bezier(0.16, 1, 0.3, 1), padding 0.7s cubic-bezier(0.16, 1, 0.3, 1), gap 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
   },
   launcherCollapsed: {
     width: 44,
