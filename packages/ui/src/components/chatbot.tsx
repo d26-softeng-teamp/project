@@ -17,6 +17,11 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
 
 function Launcher({ onSubmitQuestion }: { onSubmitQuestion?: (question: string) => void }) {
   const [value, setValue] = useState("");
+  const [expanded, setExpanded] = useState(true);
+  const [visible, setVisible] = useState(true);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+
 
   function submit() {
     const question = value.trim();
@@ -25,30 +30,55 @@ function Launcher({ onSubmitQuestion }: { onSubmitQuestion?: (question: string) 
     onSubmitQuestion?.(question);
   }
 
+  function toggleExpanded() {
+    setExpanded((prev) => {
+      if (!prev) {
+        setVisible(true);
+        requestAnimationFrame(() => inputRef.current?.focus());
+      } else {
+        setTimeout(() => setVisible(false), 650);
+      }
+      return !prev;
+    });
+  }
   return (
-    <div style={styles.launcherRoot}>
-      <div style={styles.launcher}>
-        <div style={styles.launcherIcon}>
-          <Bot size={17} aria-hidden="true" />
+      <div style={styles.launcherRoot}>
+        <div style={{ ...styles.launcher, ...(expanded ? { width: 340 } : styles.launcherCollapsed) }}>
+          <button
+              type="button"
+              onClick={toggleExpanded}
+              style={styles.launcherIcon}
+              aria-label={expanded ? "Collapse Gompei" : "Open Gompei"}
+              aria-expanded={expanded}
+          >
+            <Bot size={17} aria-hidden="true" />
+          </button>
+          <div
+              style={{
+                ...styles.launcherInputWrap,
+                ...(expanded ? null : styles.launcherInputWrapCollapsed),
+                ...(!visible ? { display: "none" } : null),
+              }}
+              aria-hidden={!expanded}
+          >
+            <input
+                ref={inputRef}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") { event.preventDefault(); submit(); }
+                }}
+                placeholder="Ask Gompei..."
+                style={styles.launcherInput}
+                aria-label="Ask Gompei"
+                tabIndex={expanded ? 0 : -1}
+            />
+            <button type="button" onClick={submit} style={styles.launcherButton} aria-label="Ask" tabIndex={expanded ? 0 : -1}>
+              <Send size={15} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-        <input
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              submit();
-            }
-          }}
-          placeholder="Ask Gompei..."
-          style={styles.launcherInput}
-          aria-label="Ask Gompei"
-        />
-        <button type="button" onClick={submit} style={styles.launcherButton} aria-label="Ask">
-          <Send size={15} aria-hidden="true" />
-        </button>
       </div>
-    </div>
   );
 }
 
