@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Boxes,
   CalendarDays,
@@ -275,9 +276,11 @@ function TopNav({ items, brandTo, accountMenu }: TopNavProps) {
                               ) : null}
                             </span>
                           ) : item.label === "Activity" ? (
-                            <Inbox className="size-4" aria-hidden strokeWidth={2} />
+                              <Inbox className="size-4" aria-hidden strokeWidth={2} />
+                          ) : item.label === "About" ? (
+                              <BookOpen className="size-4" aria-hidden strokeWidth={2} />
                           ) : (
-                            <CircleHelp className="size-4" aria-hidden strokeWidth={2} />
+                              <CircleHelp className="size-4" aria-hidden strokeWidth={2} />
                           )}
                           {item.label}
                         </NavLink>
